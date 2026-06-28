@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>訓練課表</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+  :root{
+    --bg:#0f0f0f;--surface:#1a1a1a;--card:#222;--border:#2e2e2e;
+    --accent:#e8ff00;--accent2:#ff4d00;--text:#f0f0f0;--muted:#888;
+    --blue:#4af;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',sans-serif;min-height:100vh;padding-bottom:90px;}
+
+  /* ── Top Nav Tabs ── */
+  .top-tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;}
+  .top-tab{flex:1;padding:14px 8px;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:0.9rem;letter-spacing:2px;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;background:none;border-left:none;border-right:none;border-top:none;}
+  .top-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+  .top-tab:hover:not(.active){color:var(--text);}
+  .page{display:none;}.page.active{display:block;}
+
+  /* ── Header ── */
+  header{padding:18px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+  .logo{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:3px;color:var(--accent);line-height:1;}
+  .logo span{color:var(--text);}
+  .header-badges{display:flex;gap:8px;flex-wrap:wrap;}
+  .rest-badge{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-size:0.75rem;color:var(--muted);display:flex;align-items:center;gap:6px;}
+  .rest-badge strong{color:var(--accent);font-size:0.9rem;}
+
+  /* ── Week/Day Nav ── */
+  .week-tabs{display:flex;padding:16px 20px 0;border-bottom:1px solid var(--border);}
+  .week-tab{padding:8px 24px;font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:2px;cursor:pointer;border-bottom:3px solid transparent;color:var(--muted);transition:all .2s;background:none;border-left:none;border-right:none;border-top:none;}
+  .week-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+  .week-tab:hover:not(.active){color:var(--text);}
+  .day-nav{display:flex;gap:8px;padding:14px 20px 0;flex-wrap:wrap;}
+  .day-btn{padding:6px 18px;border-radius:999px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;font-size:0.82rem;font-weight:500;transition:all .2s;}
+  .day-btn.active{background:var(--accent);border-color:var(--accent);color:#000;font-weight:700;}
+  .day-btn:hover:not(.active){border-color:var(--text);color:var(--text);}
+
+  /* ── Content ── */
+  .content{padding:18px 20px;display:none;}
+  .content.visible{display:block;}
+  .section-label{font-size:0.68rem;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:10px;}
+  .section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+  .intensity-bar{display:inline-flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 12px;margin-bottom:14px;font-size:0.82rem;}
+  .intensity-bar .pct{color:var(--accent);font-weight:700;}
+  .intensity-bar .sets{color:var(--muted);}
+
+  /* ── Exercise Cards ── */
+  .ex-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px;margin-bottom:24px;}
+  .ex-wrap{border-radius:12px;overflow:hidden;position:relative;}
+  .ex-swipe-bg{position:absolute;inset:0;background:linear-gradient(90deg,transparent 30%,rgba(255,77,0,0.15));display:flex;align-items:center;justify-content:flex-end;padding-right:14px;pointer-events:none;border-radius:12px;border:1px solid rgba(255,77,0,0.3);}
+  .ex-swipe-bg .swipe-label{font-size:0.65rem;letter-spacing:1px;color:var(--accent2);text-transform:uppercase;}
+  .ex-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;position:relative;overflow:hidden;user-select:none;transform:translateX(0);transition:transform .25s cubic-bezier(.4,0,.2,1),border-color .2s;will-change:transform;}
+  .ex-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--border);transition:background .2s;}
+  .ex-card.main-ex::before{background:var(--accent);}
+  .ex-card.aux-ex::before{background:var(--accent2);}
+  .ex-card.all-done{opacity:0.5;}
+  .ex-card.swiped{transform:translateX(-90px);}
+  .set-counter{width:42px;height:42px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:all .2s;}
+  .ex-card.main-ex .set-counter{border-color:var(--accent);}
+  .ex-card.aux-ex  .set-counter{border-color:var(--accent2);}
+  .set-num{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;line-height:1;color:var(--text);}
+  .set-label{font-size:0.45rem;color:var(--muted);letter-spacing:1px;margin-top:-1px;}
+  .ex-card.all-done.main-ex .set-counter{background:rgba(232,255,0,0.12);border-color:var(--accent);}
+  .ex-card.all-done.aux-ex  .set-counter{background:rgba(255,77,0,0.12);border-color:var(--accent2);}
+  .set-pips{display:flex;gap:3px;flex-wrap:wrap;max-width:80px;margin-top:4px;}
+  .pip{width:6px;height:6px;border-radius:50%;background:var(--border);transition:background .2s;}
+  .ex-card.main-ex .pip.filled{background:var(--accent);}
+  .ex-card.aux-ex  .pip.filled{background:var(--accent2);}
+  .ex-info{flex:1;min-width:0;}
+  .ex-name{font-size:0.9rem;font-weight:500;line-height:1.4;}
+  .ex-meta{font-size:0.72rem;color:var(--muted);margin-top:2px;}
+  .ex-pattern{font-size:0.65rem;color:var(--blue);margin-top:1px;}
+  .ex-tap-hint{font-size:0.62rem;color:var(--muted);margin-top:3px;opacity:0.7;}
+  .ex-tag{font-size:0.62rem;letter-spacing:1px;font-weight:700;padding:2px 6px;border-radius:4px;flex-shrink:0;align-self:flex-start;margin-top:2px;}
+  .main-tag{background:rgba(232,255,0,0.12);color:var(--accent);}
+  .aux-tag{background:rgba(255,77,0,0.12);color:var(--accent2);}
+  .swipe-actions{position:absolute;right:0;top:0;bottom:0;width:90px;display:flex;flex-direction:column;pointer-events:none;opacity:0;transition:opacity .2s;}
+  .swipe-actions.visible{pointer-events:all;opacity:1;}
+  .swipe-act-btn{flex:1;border:none;cursor:pointer;font-size:0.68rem;letter-spacing:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:background .2s;}
+  .swipe-act-btn .sa-icon{font-size:1rem;}
+  .sa-minus{background:rgba(255,77,0,0.25);color:var(--accent2);}
+  .sa-minus:hover{background:rgba(255,77,0,0.45);}
+  .sa-plus{background:rgba(232,255,0,0.12);color:var(--accent);}
+  .sa-plus:hover{background:rgba(232,255,0,0.3);}
+
+  /* ── Progress ── */
+  .progress-wrap{margin-bottom:20px;}
+  .progress-info{display:flex;justify-content:space-between;font-size:0.75rem;color:var(--muted);margin-bottom:6px;}
+  .progress-track{height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+  .progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .4s;}
+  .week-note{background:rgba(232,255,0,0.06);border:1px solid rgba(232,255,0,0.2);border-radius:10px;padding:10px 14px;font-size:0.8rem;color:var(--accent);margin-bottom:16px;}
+  .reset-btn{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border:1px solid var(--border);border-radius:999px;background:none;color:var(--muted);font-size:0.75rem;cursor:pointer;transition:all .2s;margin-bottom:14px;}
+  .reset-btn:hover{border-color:#555;color:var(--text);}
+
+  /* ── Finish Day Button ── */
+  .finish-day-btn{width:100%;padding:14px;border-radius:12px;border:none;background:var(--accent);color:#000;font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:2px;cursor:pointer;margin-top:8px;transition:opacity .2s;}
+  .finish-day-btn:hover{opacity:0.85;}
+
+  /* ── Timers ── */
+  .timers-wrap{padding:0 20px 20px;}
+  .timer-section{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:16px;}
+  .timer-title{font-size:0.68rem;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:14px;}
+  .rest-timer{text-align:center;}
+  .timer-display{font-family:'Bebas Neue',sans-serif;font-size:4.5rem;color:var(--accent);line-height:1;letter-spacing:4px;margin-bottom:10px;transition:color .3s;}
+  .timer-display.running{color:#fff;}
+  .timer-display.done-flash{color:var(--accent2);}
+  .timer-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:10px;}
+  .t-btn{padding:8px 20px;border-radius:999px;border:1px solid var(--border);background:none;color:var(--text);font-size:0.82rem;cursor:pointer;transition:all .2s;}
+  .t-btn.primary{background:var(--accent);border-color:var(--accent);color:#000;font-weight:700;}
+  .t-btn.danger{border-color:var(--accent2);color:var(--accent2);}
+  .preset-btns{display:flex;gap:6px;justify-content:center;}
+  .preset-btn{padding:4px 12px;border-radius:999px;border:1px solid var(--border);background:none;color:var(--muted);font-size:0.75rem;cursor:pointer;transition:all .2s;}
+  .preset-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .hiit-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+  .hiit-stats{display:flex;gap:18px;}
+  .hiit-stat .val{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--accent);line-height:1;}
+  .hiit-stat .lbl{font-size:0.62rem;color:var(--muted);letter-spacing:1px;}
+  .hiit-display{text-align:center;padding:14px 0 6px;}
+  .hiit-phase{font-size:0.72rem;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:5px;}
+  .hiit-phase.work-phase{color:var(--accent2);}
+  .hiit-phase.rest-phase{color:var(--blue);}
+  .hiit-time{font-family:'Bebas Neue',sans-serif;font-size:3.5rem;line-height:1;letter-spacing:3px;margin-bottom:8px;}
+  .hiit-time.work-phase{color:var(--accent2);}
+  .hiit-time.rest-phase{color:var(--blue);}
+  .hiit-cycle-dots{display:flex;gap:5px;justify-content:center;margin-bottom:12px;}
+  .cycle-dot{width:9px;height:9px;border-radius:50%;background:var(--border);transition:background .3s;}
+  .cycle-dot.done{background:var(--accent2);}
+  .cycle-dot.active{background:var(--accent);}
+  .hiit-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:14px;}
+  .hiit-bar-fill{height:100%;border-radius:3px;transition:width .1s linear,background .3s;}
+
+  /* ── Sticky Timer ── */
+  #stickyTimer{position:fixed;bottom:0;left:0;right:0;background:rgba(15,15,15,0.96);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--border);padding:9px 18px;display:flex;align-items:center;gap:12px;z-index:998;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);flex-wrap:wrap;}
+  #stickyTimer.visible{transform:translateY(0);}
+  .sticky-label{font-size:0.62rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;white-space:nowrap;}
+  #stickyDisplay{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:3px;color:var(--accent);line-height:1;min-width:65px;transition:color .3s;}
+  #stickyDisplay.running{color:#fff;}
+  #stickyDisplay.done-flash{color:var(--accent2);}
+  .sticky-track{flex:1;height:3px;background:var(--border);border-radius:2px;overflow:hidden;min-width:50px;}
+  .sticky-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .1s linear;}
+  .sticky-btn{padding:6px 16px;border-radius:999px;border:1px solid var(--border);background:none;color:var(--text);font-size:0.78rem;cursor:pointer;transition:all .2s;white-space:nowrap;}
+  .sticky-btn.primary{background:var(--accent);border-color:var(--accent);color:#000;font-weight:700;}
+
+  /* ── FAB ── */
+  .fab-row{position:fixed;bottom:68px;right:14px;z-index:999;display:flex;flex-direction:column;gap:7px;align-items:flex-end;}
+  .fab-btn{background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:999px;padding:8px 14px;font-size:0.78rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:5px;box-shadow:0 4px 16px rgba(0,0,0,0.4);white-space:nowrap;}
+  .fab-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+  /* ── MODALS (shared) ── */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:1100;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;}
+  .modal-overlay.hidden{display:none;}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:640px;padding:20px;margin:auto;}
+  .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+  .modal-title{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:2px;color:var(--accent);}
+  .modal-close{background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;padding:3px 7px;border-radius:6px;transition:color .2s;}
+  .modal-close:hover{color:var(--text);}
+  .editor-section{margin-bottom:20px;}
+  .editor-section-title{font-size:0.68rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+  .editor-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;}
+  .editor-label{font-size:0.78rem;color:var(--muted);min-width:56px;}
+  .editor-input{background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:6px 10px;font-size:0.85rem;font-family:'Noto Sans TC',sans-serif;transition:border-color .2s;width:100%;}
+  .editor-input:focus{outline:none;border-color:var(--accent);}
+  .editor-input.narrow{width:64px;flex-shrink:0;}
+  .ex-editor-row{display:flex;gap:6px;align-items:center;margin-bottom:6px;}
+  .ex-editor-row .editor-input{flex:1;}
+  .del-btn{background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;}
+  .del-btn:hover{border-color:var(--accent2);color:var(--accent2);}
+  .add-ex-btn{background:none;border:1px dashed var(--border);color:var(--muted);border-radius:8px;padding:6px 12px;font-size:0.8rem;cursor:pointer;transition:all .2s;width:100%;margin-top:4px;}
+  .add-ex-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .editor-tabs{display:flex;gap:0;margin-bottom:10px;border-bottom:1px solid var(--border);}
+  .editor-tab{padding:6px 16px;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font-size:0.8rem;cursor:pointer;transition:all .2s;}
+  .editor-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+  .save-btn{background:var(--accent);border:none;color:#000;font-weight:700;border-radius:999px;padding:10px 24px;font-size:0.88rem;cursor:pointer;width:100%;font-family:'Noto Sans TC',sans-serif;transition:opacity .2s;}
+  .save-btn:hover{opacity:0.85;}
+
+  /* ── Exercise Library (inside editor modal) ── */
+  .lib-search-row{display:flex;gap:8px;margin-bottom:10px;}
+  .lib-search{flex:1;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:7px 12px;font-size:0.85rem;font-family:'Noto Sans TC',sans-serif;}
+  .lib-search:focus{outline:none;border-color:var(--accent);}
+  .lib-filter-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
+  .lib-filter{padding:4px 10px;border-radius:999px;border:1px solid var(--border);background:none;color:var(--muted);font-size:0.72rem;cursor:pointer;transition:all .2s;white-space:nowrap;}
+  .lib-filter.active{background:var(--accent);border-color:var(--accent);color:#000;font-weight:700;}
+  .lib-filter:hover:not(.active){border-color:var(--text);color:var(--text);}
+  .lib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:7px;max-height:220px;overflow-y:auto;margin-bottom:12px;padding-right:4px;}
+  .lib-grid::-webkit-scrollbar{width:4px;}
+  .lib-grid::-webkit-scrollbar-track{background:transparent;}
+  .lib-grid::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+  .lib-item{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 10px;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;gap:3px;}
+  .lib-item:hover{border-color:var(--accent);background:#2a2a00;}
+  .lib-item.selected{border-color:var(--accent);background:rgba(232,255,0,0.08);}
+  .lib-item-name{font-size:0.82rem;font-weight:500;}
+  .lib-item-meta{display:flex;gap:5px;align-items:center;}
+  .lib-item-pattern{font-size:0.62rem;color:var(--blue);}
+  .lib-item-muscle{font-size:0.62rem;color:var(--muted);}
+  .lib-add-selected-btn{background:var(--accent);border:none;color:#000;font-weight:700;border-radius:8px;padding:8px 16px;font-size:0.82rem;cursor:pointer;width:100%;margin-bottom:12px;transition:opacity .2s;}
+  .lib-add-selected-btn:hover{opacity:0.85;}
+  .lib-add-selected-btn:disabled{opacity:0.3;cursor:default;}
+  .lib-divider{border:none;border-top:1px solid var(--border);margin:14px 0;}
+
+  /* ── History Page ── */
+  .page-header{padding:20px 20px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+  .page-title{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:2px;color:var(--accent);}
+  .history-empty{text-align:center;padding:60px 20px;color:var(--muted);font-size:0.88rem;line-height:1.8;}
+  .history-list{padding:16px 20px;}
+  .history-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;}
+  .history-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px;}
+  .history-card-title{font-weight:700;font-size:0.9rem;}
+  .history-card-date{font-size:0.72rem;color:var(--muted);}
+  .history-stats{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;}
+  .h-stat .val{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--accent);line-height:1;}
+  .h-stat .lbl{font-size:0.6rem;color:var(--muted);letter-spacing:1px;}
+  .history-exlist{display:flex;flex-direction:column;gap:4px;}
+  .history-ex-row{display:flex;align-items:center;justify-content:space-between;font-size:0.75rem;color:var(--muted);padding:4px 0;border-top:1px solid var(--border);}
+  .history-ex-row .ex-n{color:var(--text);}
+  .history-ex-row .ex-s{color:var(--accent);}
+  .history-del-btn{background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:3px 8px;font-size:0.72rem;cursor:pointer;transition:all .2s;flex-shrink:0;}
+  .history-del-btn:hover{border-color:var(--accent2);color:var(--accent2);}
+  .clear-history-btn{padding:7px 16px;border-radius:999px;border:1px solid var(--border);background:none;color:var(--muted);font-size:0.78rem;cursor:pointer;transition:all .2s;}
+  .clear-history-btn:hover{border-color:var(--accent2);color:var(--accent2);}
+
+  /* ── Finish Modal ── */
+  .finish-modal .modal{text-align:center;}
+  .finish-icon{font-size:3rem;margin-bottom:10px;}
+  .finish-title{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:2px;color:var(--accent);margin-bottom:6px;}
+  .finish-sub{font-size:0.8rem;color:var(--muted);margin-bottom:20px;}
+  .finish-stats{display:flex;justify-content:center;gap:24px;margin-bottom:24px;}
+  .finish-stat .val{font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--accent);line-height:1;}
+  .finish-stat .lbl{font-size:0.65rem;color:var(--muted);letter-spacing:1px;}
+  .finish-btn-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .finish-keep-btn{flex:1;padding:10px;border-radius:999px;border:1px solid var(--border);background:none;color:var(--text);font-size:0.85rem;cursor:pointer;transition:all .2s;}
+  .finish-keep-btn:hover{border-color:var(--accent);}
+  .finish-reset-btn{flex:1;padding:10px;border-radius:999px;border:none;background:var(--accent);color:#000;font-weight:700;font-size:0.85rem;cursor:pointer;}
+
+  /* ── Screenshot overlay ── */
+  #shotOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;opacity:0;pointer-events:none;transition:opacity .3s;}
+  #shotOverlay.show{opacity:1;}
+  .shot-spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .shot-msg{color:var(--text);font-size:0.88rem;}
+</style>
+</head>
+<body>
+
+<!-- Top Navigation -->
+<div class="top-tabs">
+  <button class="top-tab active" onclick="switchPage('workout')">📋 課表</button>
+  <button class="top-tab" onclick="switchPage('timer')">⏱ 計時</button>
+  <button class="top-tab" onclick="switchPage('history')">📊 歷史</button>
+</div>
+
+<!-- ══════════ PAGE: WORKOUT ══════════ -->
+<div id="page-workout" class="page active">
+  <header>
+    <div class="logo">TRAIN<span>BLOCK</span></div>
+    <div class="header-badges">
+      <div class="rest-badge">組間 <strong>60–90s</strong></div>
+    </div>
+  </header>
+  <div class="week-tabs">
+    <button class="week-tab active" onclick="switchWeek(1)">WEEK 1</button>
+    <button class="week-tab" onclick="switchWeek(2)">WEEK 2</button>
+  </div>
+  <div class="day-nav" id="dayNav"></div>
+  <div id="panels"></div>
+</div>
+
+<!-- ══════════ PAGE: TIMER ══════════ -->
+<div id="page-timer" class="page">
+  <div class="timers-wrap" id="timersWrap" style="padding-top:20px;">
+    <div class="timer-section">
+      <div class="timer-title">⏱ 組間計時器</div>
+      <div class="rest-timer">
+        <div class="timer-display" id="restDisplay">01:30</div>
+        <div class="timer-btns">
+          <button class="t-btn primary" id="restStartBtn" onclick="toggleRest()">開始</button>
+          <button class="t-btn" onclick="resetRest()">重置</button>
+        </div>
+        <div class="preset-btns">
+          <button class="preset-btn" onclick="setRest(60)">60秒</button>
+          <button class="preset-btn" onclick="setRest(75)">75秒</button>
+          <button class="preset-btn" onclick="setRest(90)">90秒</button>
+        </div>
+      </div>
+    </div>
+    <div class="timer-section">
+      <div class="hiit-header">
+        <div class="timer-title" style="margin:0">🔥 收尾間歇</div>
+        <div class="hiit-stats">
+          <div class="hiit-stat"><div class="val">30</div><div class="lbl">WORK秒</div></div>
+          <div class="hiit-stat"><div class="val">90</div><div class="lbl">REST秒</div></div>
+          <div class="hiit-stat"><div class="val">6</div><div class="lbl">循環</div></div>
+        </div>
+      </div>
+      <div class="hiit-display">
+        <div class="hiit-phase" id="hiitPhase">準備開始</div>
+        <div class="hiit-time" id="hiitTime">00:30</div>
+        <div class="hiit-cycle-dots" id="cycleDots"></div>
+        <div class="hiit-bar"><div class="hiit-bar-fill" id="hiitFill" style="width:100%;background:var(--accent)"></div></div>
+      </div>
+      <div class="timer-btns">
+        <button class="t-btn primary" id="hiitStartBtn" onclick="toggleHiit()">開始間歇</button>
+        <button class="t-btn danger" onclick="resetHiit()">重置</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PAGE: HISTORY ══════════ -->
+<div id="page-history" class="page">
+  <div class="page-header">
+    <div class="page-title">訓練歷史</div>
+    <button class="clear-history-btn" onclick="clearAllHistory()">清除全部</button>
+  </div>
+  <div id="historyContent"></div>
+</div>
+
+<!-- Sticky Timer (shows on workout page when scrolled) -->
+<div id="stickyTimer">
+  <div class="sticky-label">組間</div>
+  <div id="stickyDisplay">01:30</div>
+  <div class="sticky-track"><div class="sticky-fill" id="stickyFill" style="width:100%"></div></div>
+  <button class="sticky-btn primary" id="stickyStartBtn" onclick="toggleRest()">開始</button>
+  <button class="sticky-btn" onclick="resetRest()">↺</button>
+</div>
+
+<!-- FAB -->
+<div class="fab-row">
+  <button class="fab-btn" onclick="takeScreenshot()">📸 截圖</button>
+  <button class="fab-btn" onclick="openEditor()">⚙️ 編輯課表</button>
+</div>
+
+<!-- Screenshot overlay -->
+<div id="shotOverlay"><div class="shot-spinner"></div><div class="shot-msg">正在擷取頁面…</div></div>
+
+<!-- Finish Modal -->
+<div class="modal-overlay hidden finish-modal" id="finishModal">
+  <div class="modal">
+    <div class="finish-icon">🏆</div>
+    <div class="finish-title">訓練完成！</div>
+    <div class="finish-sub" id="finishSubtitle"></div>
+    <div class="finish-stats">
+      <div class="finish-stat"><div class="val" id="finTotalSets">0</div><div class="lbl">完成組數</div></div>
+      <div class="finish-stat"><div class="val" id="finCompletion">0%</div><div class="lbl">完成率</div></div>
+    </div>
+    <div class="finish-btn-row">
+      <button class="finish-keep-btn" onclick="closeFinish(false)">保留進度</button>
+      <button class="finish-reset-btn" onclick="closeFinish(true)">清空重來</button>
+    </div>
+  </div>
+</div>
+
+<!-- Editor Modal -->
+<div class="modal-overlay hidden" id="editorModal" onclick="closeEditorIfBg(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">編輯課表</div>
+      <button class="modal-close" onclick="closeEditor()">✕</button>
+    </div>
+    <div class="editor-tabs" id="editorWeekTabs"></div>
+    <div class="editor-tabs" id="editorDayTabs"></div>
+
+    <!-- Library section -->
+    <div class="editor-section">
+      <div class="editor-section-title">📚 動作庫</div>
+      <div class="lib-search-row">
+        <input class="lib-search" id="libSearch" placeholder="搜尋動作…" oninput="renderLibrary()">
+      </div>
+      <div class="lib-filter-row" id="libFilters"></div>
+      <div class="lib-grid" id="libGrid"></div>
+      <div class="editor-row" style="margin-bottom:8px;">
+        <span class="editor-label">加入為</span>
+        <select class="editor-input" id="libAddType" style="width:auto;flex:none;">
+          <option value="main">主項</option>
+          <option value="aux">副項</option>
+        </select>
+      </div>
+      <button class="lib-add-selected-btn" id="libAddBtn" onclick="addFromLibrary()" disabled>請先選取動作</button>
+      <hr class="lib-divider">
+    </div>
+
+    <!-- Sets config -->
+    <div class="editor-section">
+      <div class="editor-section-title">組數設定</div>
+      <div class="editor-row">
+        <span class="editor-label">強度 %</span>
+        <input class="editor-input" id="editPct" placeholder="例：70–80%">
+      </div>
+      <div class="editor-row">
+        <span class="editor-label">主項組數</span>
+        <input class="editor-input narrow" id="editMainSets" type="number" min="1" max="10">
+        <span class="editor-label" style="margin-left:10px">副項組數</span>
+        <input class="editor-input narrow" id="editAuxSets" type="number" min="1" max="10">
+      </div>
+    </div>
+    <!-- Main exercises -->
+    <div class="editor-section">
+      <div class="editor-section-title">主項動作</div>
+      <div id="editMainList"></div>
+      <button class="add-ex-btn" onclick="addEditorEx('main')">＋ 手動新增主項</button>
+    </div>
+    <!-- Aux exercises -->
+    <div class="editor-section">
+      <div class="editor-section-title">副項動作</div>
+      <div id="editAuxList"></div>
+      <button class="add-ex-btn" onclick="addEditorEx('aux')">＋ 手動新增副項</button>
+    </div>
+    <button class="save-btn" onclick="saveEditor()">儲存課表</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════
+// Audio
+// ══════════════════════════════
+const audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+function beep(freq,dur,vol,type='sine'){
+  try{const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.connect(g);g.connect(audioCtx.destination);
+  o.type=type;o.frequency.setValueAtTime(freq,audioCtx.currentTime);
+  g.gain.setValueAtTime(vol,audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur);
+  o.start();o.stop(audioCtx.currentTime+dur);}catch(e){}
+}
+function beepTick(){beep(880,0.08,0.3);}
+function beepDone(){beep(523,0.12,0.5);setTimeout(()=>beep(659,0.12,0.5),130);setTimeout(()=>beep(784,0.25,0.6),260);}
+function beepWarn(){beep(440,0.1,0.4);setTimeout(()=>beep(440,0.1,0.4),150);}
+function beepStart(){beep(660,0.15,0.5);}
+function beepAdjust(up){beep(up?600:400,0.06,0.25);}
+function resumeAudio(){if(audioCtx.state==='suspended')audioCtx.resume();}
+
+// ══════════════════════════════
+// Exercise Library
+// ══════════════════════════════
+const EXERCISE_DB = [
+  // 推 Push
+  {name:'槓鈴臥推',pattern:'推',muscle:'胸部',type:'主項'},{name:'啞鈴臥推',pattern:'推',muscle:'胸部',type:'主項'},
+  {name:'上斜槓鈴臥推',pattern:'推',muscle:'胸部',type:'主項'},{name:'槓鈴肩推',pattern:'推',muscle:'肩部',type:'主項'},
+  {name:'啞鈴肩推',pattern:'推',muscle:'肩部',type:'副項'},{name:'頸前肩推',pattern:'推',muscle:'肩部',type:'副項'},
+  {name:'伏地挺身',pattern:'推',muscle:'胸部',type:'副項'},{name:'負重伏地挺身',pattern:'推',muscle:'胸部',type:'副項'},
+  {name:'三頭下壓',pattern:'推',muscle:'手臂',type:'副項'},{name:'法式推舉',pattern:'推',muscle:'手臂',type:'副項'},
+  // 拉 Pull
+  {name:'引體向上',pattern:'拉',muscle:'背部',type:'主項'},{name:'負重引體向上',pattern:'拉',muscle:'背部',type:'主項'},
+  {name:'彈力帶引體向上',pattern:'拉',muscle:'背部',type:'副項'},{name:'滑輪下拉',pattern:'拉',muscle:'背部',type:'副項'},
+  {name:'槓鈴划船',pattern:'拉',muscle:'背部',type:'主項'},{name:'啞鈴划船',pattern:'拉',muscle:'背部',type:'副項'},
+  {name:'反式划船',pattern:'拉',muscle:'背部',type:'副項'},{name:'面拉',pattern:'拉',muscle:'肩部',type:'副項'},
+  {name:'二頭彎舉',pattern:'拉',muscle:'手臂',type:'副項'},{name:'錘式彎舉',pattern:'拉',muscle:'手臂',type:'副項'},
+  // 蹲 Squat
+  {name:'高槓深蹲',pattern:'蹲',muscle:'腿部',type:'主項'},{name:'低槓深蹲',pattern:'蹲',muscle:'腿部',type:'主項'},
+  {name:'前蹲舉',pattern:'蹲',muscle:'腿部',type:'主項'},{name:'酒杯深蹲',pattern:'蹲',muscle:'腿部',type:'副項'},
+  {name:'腿推機',pattern:'蹲',muscle:'腿部',type:'副項'},{name:'哈克深蹲',pattern:'蹲',muscle:'腿部',type:'副項'},
+  // 髖鉸鏈 Hinge
+  {name:'六角槓硬舉',pattern:'鉸鏈',muscle:'全身',type:'主項'},{name:'傳統硬舉',pattern:'鉸鏈',muscle:'全身',type:'主項'},
+  {name:'相撲硬舉',pattern:'鉸鏈',muscle:'腿部',type:'主項'},{name:'RDL',pattern:'鉸鏈',muscle:'腿部',type:'副項'},
+  {name:'早安式',pattern:'鉸鏈',muscle:'背部',type:'副項'},{name:'臀橋',pattern:'鉸鏈',muscle:'腿部',type:'副項'},
+  {name:'壺鈴擺盪',pattern:'鉸鏈',muscle:'全身',type:'副項'},
+  // 分腿 Lunge
+  {name:'分腿蹲',pattern:'分腿',muscle:'腿部',type:'副項'},{name:'保加利亞分腿蹲',pattern:'分腿',muscle:'腿部',type:'副項'},
+  {name:'弓步蹲',pattern:'分腿',muscle:'腿部',type:'副項'},{name:'酒杯側蹲',pattern:'分腿',muscle:'腿部',type:'副項'},
+  // 核心 Core
+  {name:'捲腹',pattern:'核心',muscle:'核心',type:'副項'},{name:'棒式',pattern:'核心',muscle:'核心',type:'副項'},
+  {name:'懸吊舉腿',pattern:'核心',muscle:'核心',type:'副項'},{name:'農夫走路',pattern:'核心',muscle:'全身',type:'副項'},
+  {name:'Zone 2 風扇車',pattern:'核心',muscle:'全身',type:'副項'},
+];
+const PATTERNS=['全部','推','拉','蹲','鉸鏈','分腿','核心'];
+
+let libFilter='全部', libSelected=null;
+
+function renderLibFilters(){
+  document.getElementById('libFilters').innerHTML=PATTERNS.map(p=>
+    `<button class="lib-filter ${p===libFilter?'active':''}" onclick="setLibFilter('${p}')">${p}</button>`
+  ).join('');
+}
+function setLibFilter(p){libFilter=p;libSelected=null;renderLibrary();renderLibFilters();}
+
+function renderLibrary(){
+  const q=(document.getElementById('libSearch')?.value||'').toLowerCase();
+  const items=EXERCISE_DB.filter(e=>{
+    const matchFilter=libFilter==='全部'||e.pattern===libFilter;
+    const matchSearch=!q||e.name.includes(q)||e.pattern.includes(q)||e.muscle.includes(q);
+    return matchFilter&&matchSearch;
+  });
+  document.getElementById('libGrid').innerHTML=items.length?items.map(e=>`
+    <div class="lib-item ${libSelected===e.name?'selected':''}" onclick="selectLibItem('${e.name.replace(/'/g,"\\'")}')">
+      <div class="lib-item-name">${e.name}</div>
+      <div class="lib-item-meta">
+        <span class="lib-item-pattern">${e.pattern}</span>
+        <span class="lib-item-muscle">· ${e.muscle}</span>
+      </div>
+    </div>`).join('')
+    :'<div style="color:var(--muted);font-size:0.8rem;padding:10px;text-align:center;">找不到符合動作</div>';
+  updateLibAddBtn();
+}
+
+function selectLibItem(name){
+  libSelected=libSelected===name?null:name;
+  renderLibrary();
+}
+function updateLibAddBtn(){
+  const btn=document.getElementById('libAddBtn');
+  if(!btn)return;
+  if(libSelected){btn.disabled=false;btn.textContent=`將「${libSelected}」加入課表`;}
+  else{btn.disabled=true;btn.textContent='請先選取動作';}
+}
+function addFromLibrary(){
+  if(!libSelected)return;
+  const type=document.getElementById('libAddType').value;
+  const db=EXERCISE_DB.find(e=>e.name===libSelected);
+  const note=db?`${db.pattern} · ${db.muscle}`:'';
+  schedule[editorWeek][editorDay][type==='main'?'main':'aux'].push({name:libSelected,note});
+  renderEditorList(type,schedule[editorWeek][editorDay][type==='main'?'main':'aux']);
+  libSelected=null;renderLibrary();
+  beepTick();
+}
+
+// ══════════════════════════════
+// Schedule Data
+// ══════════════════════════════
+const DEFAULT_MAIN=5,DEFAULT_AUX=3;
+const schedule={
+  1:{
+    1:{sets:'5×5',pct:'70–80%',
+      main:[{name:'高槓深蹲',note:'蹲 · 腿部'},{name:'槓鈴臥推',note:'推 · 胸部'},{name:'引體向上',note:'拉 · 背部'}],
+      aux:[{name:'RDL',note:'鉸鏈 · 腿部'},{name:'反式划船',note:'拉 · 背部'},{name:'啞鈴肩推',note:'推 · 肩部'}]},
+    2:{sets:'5×5',pct:'70–80%',
+      main:[{name:'六角槓硬舉',note:'鉸鏈 · 全身'},{name:'啞鈴肩推（視狀況）or Bench',note:'推 · 肩部'},{name:'反式划船',note:'拉 · 背部'}],
+      aux:[{name:'酒杯側蹲 / 分腿蹲',note:'分腿 · 腿部'},{name:'伏地挺身',note:'推 · 胸部'},{name:'彈力帶引體向上',note:'拉 · 背部'}]}
+  },
+  2:{
+    3:{sets:'5×5',pct:'70–80%',
+      main:[{name:'低槓深蹲',note:'蹲 · 腿部'},{name:'啞鈴臥推',note:'推 · 胸部'},{name:'負重引體向上',note:'拉 · 背部'}],
+      aux:[{name:'RDL',note:'鉸鏈 · 腿部'},{name:'反式划船 or 槓鈴划船',note:'拉 · 背部'},{name:'頸前肩推（視狀況）',note:'推 · 肩部'},{name:'Zone 2 風扇車',note:'核心 · 全身'}]},
+    4:{sets:'5×5',pct:'70–80%',
+      main:[{name:'六角槓硬舉',note:'鉸鏈 · 全身'},{name:'啞鈴肩推',note:'推 · 肩部'},{name:'反式划船',note:'拉 · 背部'}],
+      aux:[{name:'分腿蹲',note:'分腿 · 腿部'},{name:'負重伏地挺身',note:'推 · 胸部'},{name:'引體向上',note:'拉 · 背部'}]}
+  }
+};
+
+let currentWeek=1,currentDay=1;
+let setsData={},perExSets={},dayConfig={};
+
+function getKey(w,d){return `w${w}d${d}`;}
+function getTotalSets(key,exName,type){
+  const pex=perExSets[key];
+  if(pex&&pex[exName]!==undefined)return pex[exName];
+  const dc=dayConfig[key];
+  if(dc)return type==='main'?dc.mainSets:dc.auxSets;
+  return type==='main'?DEFAULT_MAIN:DEFAULT_AUX;
+}
+
+// ══════════════════════════════
+// Page Nav
+// ══════════════════════════════
+function switchPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.top-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  const idx={workout:0,timer:1,history:2}[name];
+  document.querySelectorAll('.top-tab')[idx].classList.add('active');
+  if(name==='history')renderHistory();
+  // sticky timer only on workout page
+  checkSticky();
+}
+
+// ══════════════════════════════
+// Week / Day
+// ══════════════════════════════
+function switchWeek(w){
+  currentWeek=w;
+  document.querySelectorAll('.week-tab').forEach((t,i)=>t.classList.toggle('active',i+1===w));
+  currentDay=Object.keys(schedule[w]).map(Number)[0];
+  renderDayNav();closeAllSwipes();renderContent();
+}
+function switchDay(d){
+  currentDay=d;
+  document.querySelectorAll('.day-btn').forEach(b=>b.classList.toggle('active',+b.dataset.day===d));
+  closeAllSwipes();renderContent();
+}
+function renderDayNav(){
+  const days=Object.keys(schedule[currentWeek]).map(Number);
+  document.getElementById('dayNav').innerHTML=days.map(d=>
+    `<button class="day-btn ${d===currentDay?'active':''}" data-day="${d}" onclick="switchDay(${d})">Day ${d}</button>`
+  ).join('');
+}
+
+// ══════════════════════════════
+// Render Content
+// ══════════════════════════════
+function renderContent(){
+  const w=currentWeek,d=currentDay,data=schedule[w][d],key=getKey(w,d);
+  if(!setsData[key])setsData[key]={};
+  if(!perExSets[key])perExSets[key]={};
+  const allEx=[...data.main.map(e=>({...e,type:'main'})),...data.aux.map(e=>({...e,type:'aux'}))];
+  const doneCount=allEx.filter(e=>(setsData[key][e.name]||0)>=getTotalSets(key,e.name,e.type)).length;
+  const total=allEx.length,pct=total?Math.round(doneCount/total*100):0;
+  const weekNote=w===2?'<div class="week-note">📈 Week 2：主項重量進階 +2.5–5 kg</div>':'';
+  const mainCards=data.main.map(e=>exCard(e,'main',key)).join('');
+  const auxCards=data.aux.map(e=>exCard(e,'aux',key)).join('');
+  document.getElementById('panels').innerHTML=`
+    <div class="content visible">
+      ${weekNote}
+      <button class="reset-btn" onclick="resetDay()">↺ 重置今日</button>
+      <div class="progress-wrap">
+        <div class="progress-info"><span>今日進度</span><span>${doneCount}/${total} 完成</span></div>
+        <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+      </div>
+      <div class="section-label">主項 · ${data.sets} · ${data.pct}</div>
+      <div class="intensity-bar"><span class="pct">${data.pct}</span><span class="sets">${data.sets}</span></div>
+      <div class="ex-grid">${mainCards}</div>
+      <div class="section-label">副項 · 10×3</div>
+      <div class="ex-grid">${auxCards}</div>
+      <button class="finish-day-btn" onclick="openFinish()">✓ 完成今日訓練並記錄</button>
+    </div>`;
+  attachSwipeListeners();
+}
+
+function exCard(ex,type,key){
+  const total=getTotalSets(key,ex.name,type);
+  const done=setsData[key][ex.name]||0;
+  const allDone=done>=total;
+  const pips=Array.from({length:total},(_,i)=>`<div class="pip ${i<done?'filled':''}"></div>`).join('');
+  const safeName=ex.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const patternHint=ex.note?`<div class="ex-pattern">${ex.note}</div>`:'';
+  return `
+  <div class="ex-wrap">
+    <div class="ex-swipe-bg"><span class="swipe-label">← −組 / +組</span></div>
+    <div class="ex-card ${type}-ex ${allDone?'all-done':''}" onclick="addSet('${key}','${safeName}','${type}')">
+      <div class="set-counter">
+        <div class="set-num">${done}</div>
+        <div class="set-label">/ ${total}</div>
+      </div>
+      <div class="ex-info">
+        <div class="ex-name">${ex.name}</div>
+        ${patternHint}
+        <div class="set-pips">${pips}</div>
+        <div class="ex-tap-hint">${allDone?'✓ 完成 · 長按重置':'點擊記錄 · 左滑調整'}</div>
+      </div>
+      <span class="ex-tag ${type}-tag">${type==='main'?'主項':'副項'}</span>
+    </div>
+    <div class="swipe-actions" id="actions_${CSS.escape(ex.name)}">
+      <button class="swipe-act-btn sa-minus" onclick="adjustSets('${key}','${safeName}','${type}',-1);event.stopPropagation()">
+        <span class="sa-icon">−</span><span>減組</span>
+      </button>
+      <button class="swipe-act-btn sa-plus" onclick="adjustSets('${key}','${safeName}','${type}',+1);event.stopPropagation()">
+        <span class="sa-icon">＋</span><span>加組</span>
+      </button>
+    </div>
+  </div>`;
+}
+
+// ══════════════════════════════
+// Set Actions
+// ══════════════════════════════
+function addSet(key,name,type){
+  resumeAudio();
+  const total=getTotalSets(key,name,type);
+  const cur=setsData[key][name]||0;
+  if(cur>=total)return;
+  setsData[key][name]=cur+1;
+  beepTick();
+  if(setsData[key][name]>=total)setTimeout(beepDone,50);
+  renderContent();
+}
+function adjustSets(key,name,type,delta){
+  resumeAudio();
+  if(!perExSets[key])perExSets[key]={};
+  const cur=getTotalSets(key,name,type);
+  const next=Math.max(1,Math.min(10,cur+delta));
+  perExSets[key][name]=next;
+  if((setsData[key][name]||0)>next)setsData[key][name]=next;
+  beepAdjust(delta>0);
+  renderContent();
+}
+function resetDay(){
+  const key=getKey(currentWeek,currentDay);
+  setsData[key]={};renderContent();
+}
+
+// ══════════════════════════════
+// Swipe Gestures
+// ══════════════════════════════
+let swipeState=null;
+function closeAllSwipes(){
+  document.querySelectorAll('.ex-card.swiped').forEach(c=>{
+    c.classList.remove('swiped');
+    c.closest('.ex-wrap')?.querySelector('.swipe-actions')?.classList.remove('visible');
+  });
+}
+function attachSwipeListeners(){
+  document.querySelectorAll('.ex-card').forEach(card=>{
+    let pressTimer=null;
+    card.addEventListener('touchstart',e=>{
+      const t=e.touches[0];
+      swipeState={card,startX:t.clientX,startY:t.clientY,moved:false};
+      pressTimer=setTimeout(()=>{
+        if(!swipeState?.moved){
+          const name=card.querySelector('.ex-name')?.textContent;
+          const key=getKey(currentWeek,currentDay);
+          if(name){setsData[key][name]=0;beepTick();renderContent();}
+        }
+      },700);
+    },{passive:true});
+    card.addEventListener('touchmove',e=>{
+      if(!swipeState)return;
+      const t=e.touches[0];
+      const dx=t.clientX-swipeState.startX,dy=t.clientY-swipeState.startY;
+      if(Math.abs(dy)>Math.abs(dx)+10)return;
+      swipeState.moved=true;clearTimeout(pressTimer);
+      if(dx<-20){
+        closeAllSwipes();card.classList.add('swiped');
+        card.closest('.ex-wrap')?.querySelector('.swipe-actions')?.classList.add('visible');
+      }else if(dx>10){
+        card.classList.remove('swiped');
+        card.closest('.ex-wrap')?.querySelector('.swipe-actions')?.classList.remove('visible');
+      }
+    },{passive:true});
+    card.addEventListener('touchend',e=>{
+      clearTimeout(pressTimer);
+      if(!swipeState?.moved){
+        const name=card.querySelector('.ex-name')?.textContent;
+        if(name){const type=card.classList.contains('main-ex')?'main':'aux';addSet(getKey(currentWeek,currentDay),name,type);}
+      }
+      swipeState=null;
+    });
+    // mouse long press
+    let mPressTimer=null;
+    card.addEventListener('mousedown',e=>{
+      mPressTimer=setTimeout(()=>{
+        const name=card.querySelector('.ex-name')?.textContent;
+        const key=getKey(currentWeek,currentDay);
+        if(name){setsData[key][name]=0;beepTick();renderContent();}
+      },700);
+    });
+    card.addEventListener('mouseup',()=>clearTimeout(mPressTimer));
+    card.addEventListener('mouseleave',()=>clearTimeout(mPressTimer));
+  });
+  document.addEventListener('touchstart',e=>{if(!e.target.closest('.ex-wrap'))closeAllSwipes();},{passive:true});
+}
+
+// ══════════════════════════════
+// Finish Day & History
+// ══════════════════════════════
+function openFinish(){
+  const key=getKey(currentWeek,currentDay);
+  const data=schedule[currentWeek][currentDay];
+  const allEx=[...data.main.map(e=>({...e,type:'main'})),...data.aux.map(e=>({...e,type:'aux'}))];
+  const doneCount=allEx.filter(e=>(setsData[key][e.name]||0)>=getTotalSets(key,e.name,e.type)).length;
+  const total=allEx.length;
+  const totalSetsCompleted=allEx.reduce((sum,e)=>sum+(setsData[key][e.name]||0),0);
+  document.getElementById('finishSubtitle').textContent=`Week ${currentWeek} · Day ${currentDay}`;
+  document.getElementById('finTotalSets').textContent=totalSetsCompleted;
+  document.getElementById('finCompletion').textContent=total?Math.round(doneCount/total*100)+'%':'0%';
+  document.getElementById('finishModal').classList.remove('hidden');
+  // save to history immediately
+  saveToHistory();
+  beepDone();
+}
+function closeFinish(reset){
+  document.getElementById('finishModal').classList.add('hidden');
+  if(reset)resetDay();
+}
+
+function saveToHistory(){
+  const key=getKey(currentWeek,currentDay);
+  const data=schedule[currentWeek][currentDay];
+  const allEx=[...data.main.map(e=>({...e,type:'main'})),...data.aux.map(e=>({...e,type:'aux'}))];
+  const exLogs=allEx.map(e=>({
+    name:e.name,
+    note:e.note||'',
+    type:e.type,
+    doneSets:setsData[key][e.name]||0,
+    totalSets:getTotalSets(key,e.name,e.type)
+  }));
+  const doneCount=allEx.filter(e=>(setsData[key][e.name]||0)>=getTotalSets(key,e.name,e.type)).length;
+  const totalSets=allEx.reduce((sum,e)=>sum+(setsData[key][e.name]||0),0);
+  const record={
+    id:Date.now(),
+    week:currentWeek,day:currentDay,
+    date:new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'}),
+    time:new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'}),
+    pct:data.pct,
+    completion:allEx.length?Math.round(doneCount/allEx.length*100):0,
+    totalSets,
+    exercises:exLogs
+  };
+  const hist=getHistory();
+  hist.unshift(record);
+  // keep last 60
+  if(hist.length>60)hist.splice(60);
+  localStorage.setItem('trainblock_history',JSON.stringify(hist));
+}
+function getHistory(){
+  try{return JSON.parse(localStorage.getItem('trainblock_history')||'[]');}catch{return[];}
+}
+function deleteHistoryRecord(id){
+  const hist=getHistory().filter(r=>r.id!==id);
+  localStorage.setItem('trainblock_history',JSON.stringify(hist));
+  renderHistory();
+}
+function clearAllHistory(){
+  if(!confirm('確定清除所有訓練紀錄？'))return;
+  localStorage.removeItem('trainblock_history');
+  renderHistory();
+}
+
+function renderHistory(){
+  const hist=getHistory();
+  const el=document.getElementById('historyContent');
+  if(!hist.length){
+    el.innerHTML='<div class="history-empty">📭 尚無訓練紀錄<br>完成一次訓練後自動儲存</div>';return;
+  }
+  el.innerHTML='<div class="history-list">'+hist.map(r=>{
+    const exRows=r.exercises.map(e=>`
+      <div class="history-ex-row">
+        <span class="ex-n">${e.name}</span>
+        <span class="ex-s">${e.doneSets}/${e.totalSets} 組</span>
+      </div>`).join('');
+    return `
+    <div class="history-card">
+      <div class="history-card-header">
+        <div>
+          <div class="history-card-title">Week ${r.week} · Day ${r.day}</div>
+          <div class="history-card-date">${r.date} ${r.time} · ${r.pct}</div>
+        </div>
+        <button class="history-del-btn" onclick="deleteHistoryRecord(${r.id})">刪除</button>
+      </div>
+      <div class="history-stats">
+        <div class="h-stat"><div class="val">${r.totalSets}</div><div class="lbl">完成組數</div></div>
+        <div class="h-stat"><div class="val">${r.completion}%</div><div class="lbl">完成率</div></div>
+      </div>
+      <div class="history-exlist">${exRows}</div>
+    </div>`;
+  }).join('')+'</div>';
+}
+
+// ══════════════════════════════
+// Rest Timer
+// ══════════════════════════════
+let restTotal=90,restLeft=90,restRunning=false,restInterval=null;
+function fmt(s){return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;}
+function syncRestUI(){
+  const pct=restTotal>0?(restLeft/restTotal)*100:0;
+  const txt=restLeft<=0?'GO!':fmt(restLeft);
+  const cls=restRunning?'running':(restLeft<=0?'done-flash':'');
+  ['restDisplay','stickyDisplay'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent=txt;el.className=cls;}});
+  const rsb=document.getElementById('restStartBtn');if(rsb)rsb.textContent=restRunning?'暫停':(restLeft<=0?'開始':'繼續');
+  const ssb=document.getElementById('stickyStartBtn');if(ssb)ssb.textContent=restRunning?'暫停':(restLeft<=0?'開始':'繼續');
+  const sf=document.getElementById('stickyFill');if(sf){sf.style.width=pct+'%';sf.style.background=restRunning?'#fff':'var(--accent)';}
+}
+function setRest(s){resetRest();restTotal=restLeft=s;syncRestUI();}
+function toggleRest(){
+  resumeAudio();
+  if(restRunning){clearInterval(restInterval);restRunning=false;syncRestUI();}
+  else{
+    if(restLeft<=0)restLeft=restTotal;
+    restRunning=true;beepStart();syncRestUI();
+    restInterval=setInterval(()=>{
+      restLeft--;
+      if(restLeft===3)beepWarn();
+      if(restLeft<=0){clearInterval(restInterval);restRunning=false;beepDone();}
+      syncRestUI();
+    },1000);
+  }
+}
+function resetRest(){clearInterval(restInterval);restRunning=false;restLeft=restTotal;syncRestUI();}
+
+// ══════════════════════════════
+// Sticky Timer (workout page only)
+// ══════════════════════════════
+function checkSticky(){
+  const onWorkout=document.getElementById('page-workout').classList.contains('active');
+  if(!onWorkout){document.getElementById('stickyTimer').classList.remove('visible');return;}
+  const panels=document.getElementById('panels');
+  if(!panels)return;
+  const rect=panels.getBoundingClientRect();
+  document.getElementById('stickyTimer').classList.toggle('visible',rect.bottom<window.innerHeight*0.5);
+}
+window.addEventListener('scroll',checkSticky,{passive:true});
+window.addEventListener('resize',checkSticky,{passive:true});
+
+// ══════════════════════════════
+// HIIT Timer
+// ══════════════════════════════
+const HIIT_WORK=30,HIIT_REST=90,HIIT_CYCLES=6;
+let hiit={running:false,phase:'idle',cycle:0,timeLeft:HIIT_WORK,interval:null};
+function buildCycleDots(){
+  document.getElementById('cycleDots').innerHTML=
+    Array.from({length:HIIT_CYCLES},(_,i)=>`<div class="cycle-dot" id="dot${i}"></div>`).join('');
+}
+function updateHiitUI(){
+  const s=hiit,pe=document.getElementById('hiitPhase'),te=document.getElementById('hiitTime'),fe=document.getElementById('hiitFill');
+  if(s.phase==='idle'){pe.textContent='準備開始';pe.className='hiit-phase';te.textContent=fmt(HIIT_WORK);te.className='hiit-time';fe.style.width='100%';fe.style.background='var(--accent)';for(let i=0;i<HIIT_CYCLES;i++)document.getElementById(`dot${i}`).className='cycle-dot';return;}
+  if(s.phase==='done'){pe.textContent='完成！';pe.className='hiit-phase';te.textContent='🎉';te.className='hiit-time';fe.style.width='100%';fe.style.background='var(--accent)';return;}
+  const isWork=s.phase==='work',total=isWork?HIIT_WORK:HIIT_REST;
+  pe.textContent=isWork?`CYCLE ${s.cycle+1} · 全速衝刺`:`CYCLE ${s.cycle+1} · 恢復休息`;
+  pe.className=`hiit-phase ${isWork?'work-phase':'rest-phase'}`;
+  te.textContent=fmt(s.timeLeft);te.className=`hiit-time ${isWork?'work-phase':'rest-phase'}`;
+  fe.style.width=(s.timeLeft/total*100)+'%';fe.style.background=isWork?'var(--accent2)':'var(--blue)';
+  for(let i=0;i<HIIT_CYCLES;i++){const d=document.getElementById(`dot${i}`);d.className='cycle-dot'+(i<s.cycle?' done':i===s.cycle?' active':'');}
+}
+function toggleHiit(){
+  resumeAudio();
+  if(hiit.phase==='done'){resetHiit();return;}
+  if(hiit.running){clearInterval(hiit.interval);hiit.running=false;document.getElementById('hiitStartBtn').textContent='繼續';}
+  else{
+    hiit.running=true;document.getElementById('hiitStartBtn').textContent='暫停';
+    if(hiit.phase==='idle'){hiit.phase='work';hiit.cycle=0;hiit.timeLeft=HIIT_WORK;beepStart();}
+    hiit.interval=setInterval(()=>{
+      hiit.timeLeft--;
+      if(hiit.timeLeft===3)beepWarn();
+      if(hiit.timeLeft<0){
+        if(hiit.phase==='work'){hiit.phase='rest';hiit.timeLeft=HIIT_REST;beepDone();}
+        else{hiit.cycle++;if(hiit.cycle>=HIIT_CYCLES){clearInterval(hiit.interval);hiit.running=false;hiit.phase='done';beepDone();setTimeout(beepDone,400);document.getElementById('hiitStartBtn').textContent='重新開始';updateHiitUI();return;}hiit.phase='work';hiit.timeLeft=HIIT_WORK;beepStart();}
+      }
+      updateHiitUI();
+    },1000);
+  }
+}
+function resetHiit(){clearInterval(hiit.interval);hiit={running:false,phase:'idle',cycle:0,timeLeft:HIIT_WORK,interval:null};document.getElementById('hiitStartBtn').textContent='開始間歇';updateHiitUI();}
+
+// ══════════════════════════════
+// Screenshot (html2canvas)
+// ══════════════════════════════
+async function takeScreenshot(){
+  const overlay=document.getElementById('shotOverlay');
+  overlay.classList.add('show');
+  try{
+    // load html2canvas dynamically
+    if(!window.html2canvas){
+      await new Promise((res,rej)=>{
+        const s=document.createElement('script');
+        s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+        s.onload=res;s.onerror=rej;
+        document.head.appendChild(s);
+      });
+    }
+    // capture current active page content
+    const target=document.querySelector('.page.active');
+    const canvas=await html2canvas(target,{
+      backgroundColor:'#0f0f0f',
+      scale:2,
+      useCORS:true,
+      logging:false,
+      scrollY:-window.scrollY
+    });
+    // download
+    const link=document.createElement('a');
+    const now=new Date();
+    link.download=`trainblock_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.png`;
+    link.href=canvas.toDataURL('image/png');
+    link.click();
+  }catch(e){
+    alert('截圖失敗，請確認網路連線後再試');
+    console.error(e);
+  }finally{
+    overlay.classList.remove('show');
+  }
+}
+
+// ══════════════════════════════
+// Editor
+// ══════════════════════════════
+let editorWeek=1,editorDay=1;
+function openEditor(){
+  editorWeek=currentWeek;editorDay=currentDay;
+  libSelected=null;libFilter='全部';
+  renderEditorTabs();loadEditorDay();renderLibFilters();renderLibrary();
+  document.getElementById('editorModal').classList.remove('hidden');
+}
+function closeEditor(){document.getElementById('editorModal').classList.add('hidden');}
+function closeEditorIfBg(e){if(e.target===document.getElementById('editorModal'))closeEditor();}
+function renderEditorTabs(){
+  document.getElementById('editorWeekTabs').innerHTML=[1,2].map(w=>
+    `<button class="editor-tab ${w===editorWeek?'active':''}" onclick="editorSwitchWeek(${w})">WEEK ${w}</button>`).join('');
+  const days=Object.keys(schedule[editorWeek]).map(Number);
+  document.getElementById('editorDayTabs').innerHTML=days.map(d=>
+    `<button class="editor-tab ${d===editorDay?'active':''}" onclick="editorSwitchDay(${d})">DAY ${d}</button>`).join('');
+}
+function editorSwitchWeek(w){editorWeek=w;editorDay=Object.keys(schedule[w]).map(Number)[0];renderEditorTabs();loadEditorDay();}
+function editorSwitchDay(d){editorDay=d;renderEditorTabs();loadEditorDay();}
+function loadEditorDay(){
+  const data=schedule[editorWeek][editorDay],key=getKey(editorWeek,editorDay);
+  const dc=dayConfig[key]||{mainSets:DEFAULT_MAIN,auxSets:DEFAULT_AUX};
+  document.getElementById('editPct').value=data.pct;
+  document.getElementById('editMainSets').value=dc.mainSets;
+  document.getElementById('editAuxSets').value=dc.auxSets;
+  renderEditorList('main',data.main);renderEditorList('aux',data.aux);
+}
+function renderEditorList(type,arr){
+  const el=document.getElementById(type==='main'?'editMainList':'editAuxList');
+  el.innerHTML=arr.map((e,i)=>`
+    <div class="ex-editor-row">
+      <input class="editor-input" value="${e.name.replace(/"/g,'&quot;')}" placeholder="動作名稱"
+        oninput="updateEditorName('${type}',${i},this.value)">
+      <button class="del-btn" onclick="delEditorEx('${type}',${i})">✕</button>
+    </div>`).join('');
+}
+function updateEditorName(type,idx,val){schedule[editorWeek][editorDay][type==='main'?'main':'aux'][idx].name=val;}
+function delEditorEx(type,idx){
+  const arr=schedule[editorWeek][editorDay][type==='main'?'main':'aux'];
+  arr.splice(idx,1);renderEditorList(type,arr);
+}
+function addEditorEx(type){
+  schedule[editorWeek][editorDay][type==='main'?'main':'aux'].push({name:'新動作',note:''});
+  renderEditorList(type,schedule[editorWeek][editorDay][type==='main'?'main':'aux']);
+}
+function saveEditor(){
+  const key=getKey(editorWeek,editorDay);
+  dayConfig[key]={
+    mainSets:parseInt(document.getElementById('editMainSets').value)||DEFAULT_MAIN,
+    auxSets:parseInt(document.getElementById('editAuxSets').value)||DEFAULT_AUX
+  };
+  schedule[editorWeek][editorDay].pct=document.getElementById('editPct').value;
+  perExSets[key]={};setsData[key]={};
+  closeEditor();
+  if(currentWeek===editorWeek&&currentDay===editorDay)renderContent();
+  beepTick();
+}
+
+// ══════════════════════════════
+// Init
+// ══════════════════════════════
+buildCycleDots();renderDayNav();renderContent();updateHiitUI();syncRestUI();
+setTimeout(checkSticky,200);
+</script>
+</body>
+</html>
