@@ -34,7 +34,8 @@
   .week-tab{padding:8px 24px;font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:2px;cursor:pointer;border-bottom:3px solid transparent;color:var(--muted);transition:all .2s;background:none;border-left:none;border-right:none;border-top:none;}
   .week-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
   .week-tab:hover:not(.active){color:var(--text);}
-  .day-nav{display:flex;gap:8px;padding:14px 20px 0;flex-wrap:wrap;}
+  .day-nav{display:flex;gap:8px;padding:14px 20px 0;flex-wrap:wrap;align-items:center;}
+  .rest-gap{font-size:0.72rem;color:var(--muted);display:flex;align-items:center;gap:4px;padding:0 4px;white-space:nowrap;}
   .day-btn{padding:6px 18px;border-radius:999px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;font-size:0.82rem;font-weight:500;transition:all .2s;}
   .day-btn.active{background:var(--accent);border-color:var(--accent);color:#000;font-weight:700;}
   .day-btn:hover:not(.active){border-color:var(--text);color:var(--text);}
@@ -250,6 +251,7 @@
   <button class="top-tab active" onclick="switchPage('workout')">📋 課表</button>
   <button class="top-tab" onclick="switchPage('timer')">⏱ 計時</button>
   <button class="top-tab" onclick="switchPage('history')">📊 歷史</button>
+  <button class="top-tab" onclick="window.open('https://drive.google.com/drive/folders/1x9-kvyzQF6rXZ97y4VlzGBywM3JkxQLY?usp=sharing','_blank')">📚 教材</button>
 </div>
 
 <!-- ══════════ PAGE: WORKOUT ══════════ -->
@@ -257,7 +259,6 @@
   <header>
     <div class="logo">TRAIN<span>BLOCK</span></div>
     <div class="header-badges">
-      <div class="rest-badge">組間 <strong>60–90s</strong></div>
     </div>
   </header>
   <div class="week-tabs">
@@ -581,9 +582,12 @@ function switchDay(d){
 }
 function renderDayNav(){
   const days=Object.keys(schedule[currentWeek]).map(Number);
-  document.getElementById('dayNav').innerHTML=days.map(d=>
-    `<button class="day-btn ${d===currentDay?'active':''}" data-day="${d}" onclick="switchDay(${d})">Day ${d}</button>`
-  ).join('');
+  const labels=['第一練','第二練'];
+  document.getElementById('dayNav').innerHTML=days.map((d,i)=>{
+    const btn=`<button class="day-btn ${d===currentDay?'active':''}" data-day="${d}" onclick="switchDay(${d})">${labels[i]||'Day '+d}</button>`;
+    const restGap=i===0?'<span class="rest-gap">😴 中間休息 1–2 天</span>':'';
+    return btn+restGap;
+  }).join('');
 }
 
 // ══════════════════════════════
@@ -750,7 +754,8 @@ function openFinish(){
   const doneCount=allEx.filter(e=>(setsData[key][e.name]||0)>=getTotalSets(key,e.name,e.type)).length;
   const total=allEx.length;
   const totalSetsCompleted=allEx.reduce((sum,e)=>sum+(setsData[key][e.name]||0),0);
-  document.getElementById('finishSubtitle').textContent=`Week ${currentWeek} · Day ${currentDay}`;
+  const dayLabel=currentDay%2===1?'第一練':'第二練';
+  document.getElementById('finishSubtitle').textContent=`Week ${currentWeek} · ${dayLabel}`;
   document.getElementById('finTotalSets').textContent=totalSetsCompleted;
   document.getElementById('finCompletion').textContent=total?Math.round(doneCount/total*100)+'%':'0%';
   document.getElementById('finishModal').classList.remove('hidden');
@@ -822,7 +827,7 @@ function renderHistory(){
     <div class="history-card">
       <div class="history-card-header">
         <div>
-          <div class="history-card-title">Week ${r.week} · Day ${r.day}</div>
+          <div class="history-card-title">Week ${r.week} · ${r.day%2===1?'第一練':'第二練'}</div>
           <div class="history-card-date">${r.date} ${r.time} · ${r.pct}</div>
         </div>
         <button class="history-del-btn" onclick="deleteHistoryRecord(${r.id})">刪除</button>
