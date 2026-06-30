@@ -236,11 +236,11 @@
 
   /* ── Weight Modal ── */
   .weight-modal .modal{max-width:380px;text-align:center;}
-  .weight-stepper{display:flex;align-items:center;justify-content:center;gap:6px;margin:14px 0;flex-wrap:wrap;}
+  .weight-stepper{display:flex;align-items:center;justify-content:center;gap:5px;margin:14px 0;flex-wrap:wrap;}
   .weight-step-btn{
-    width:52px;height:52px;border-radius:50%;
+    width:46px;height:46px;border-radius:50%;
     border:1px solid var(--border);background:var(--card);
-    color:var(--text);font-size:0.78rem;font-weight:600;
+    color:var(--text);font-size:0.7rem;font-weight:600;
     cursor:pointer;transition:all .2s;flex-shrink:0;
   }
   .weight-step-btn:hover{border-color:var(--accent2);color:var(--accent2);}
@@ -386,12 +386,14 @@
       <button class="weight-step-btn" onclick="stepWeight(-10)">−10</button>
       <button class="weight-step-btn" onclick="stepWeight(-5)">−5</button>
       <button class="weight-step-btn" onclick="stepWeight(-1)">−1</button>
+      <button class="weight-step-btn" onclick="stepWeight(-0.5)">−0.5</button>
     </div>
     <div class="weight-display-wrap">
-      <input type="number" class="weight-input" id="weightInput" step="1" min="0">
+      <input type="number" class="weight-input" id="weightInput" step="0.5" min="0">
       <span class="weight-input-unit">kg</span>
     </div>
     <div class="weight-stepper">
+      <button class="weight-step-btn plus" onclick="stepWeight(0.5)">+0.5</button>
       <button class="weight-step-btn plus" onclick="stepWeight(1)">+1</button>
       <button class="weight-step-btn plus" onclick="stepWeight(5)">+5</button>
       <button class="weight-step-btn plus" onclick="stepWeight(10)">+10</button>
@@ -491,7 +493,13 @@ function beep(freq,dur,vol,type='sine'){
   o.start();o.stop(audioCtx.currentTime+dur);}catch(e){}
 }
 function beepTick(){beep(880,0.08,0.3);}
-function beepDone(){beep(523,0.12,0.5);setTimeout(()=>beep(659,0.12,0.5),130);setTimeout(()=>beep(784,0.25,0.6),260);}
+function beepDone(){
+  // 響亮持續約3秒的鬧鈴：方波音色 + 間歇嗶聲節奏
+  const pattern=[0,0.35,0.7,1.05,1.4,1.75,2.1,2.45,2.8];
+  pattern.forEach(t=>{
+    setTimeout(()=>beep(1046,0.22,0.7,'square'),t*1000);
+  });
+}
 function beepWarn(){beep(440,0.1,0.4);setTimeout(()=>beep(440,0.1,0.4),150);}
 function beepStart(){beep(660,0.15,0.5);}
 function beepAdjust(up){beep(up?600:400,0.06,0.25);}
@@ -778,7 +786,7 @@ function closeWeightIfBg(e){if(e.target===document.getElementById('weightModal')
 function stepWeight(delta){
   const input=document.getElementById('weightInput');
   const cur=parseFloat(input.value)||0;
-  const next=Math.max(0,cur+delta);
+  const next=Math.max(0,Math.round((cur+delta)*10)/10);
   input.value=next;
   beepAdjust(delta>0);
 }
