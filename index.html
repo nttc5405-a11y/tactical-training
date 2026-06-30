@@ -716,7 +716,7 @@ function exCard(ex,type,key){
         <div class="ex-tap-hint">${allDone?'✓ 完成 · 長按重置':'點擊記錄 · 左滑調整'}</div>
       </div>
       <div class="ex-side">
-        <div class="weight-badge" onclick="openWeightEditor('${key}','${safeName}',${weight});event.stopPropagation()">
+        <div class="weight-badge" onclick="event.stopPropagation();openWeightEditor('${key}','${safeName}',${weight})">
           <span class="weight-val">${weight>0?weight:'＋'}</span>${weight>0?'<span class="weight-unit">kg</span>':''}
         </div>
         <span class="ex-tag ${type}-tag">${type==='main'?'主項':'副項'}</span>
@@ -804,10 +804,12 @@ function attachSwipeListeners(){
   document.querySelectorAll('.ex-card').forEach(card=>{
     let pressTimer=null;
     card.addEventListener('touchstart',e=>{
+      if(e.target.closest('.weight-badge')){swipeState=null;return;}
       const t=e.touches[0];
-      swipeState={card,startX:t.clientX,startY:t.clientY,moved:false};
+      swipeState={card,startX:t.clientX,startY:t.clientY,moved:false,longPressed:false};
       pressTimer=setTimeout(()=>{
-        if(!swipeState?.moved){
+        if(swipeState&&!swipeState.moved){
+          swipeState.longPressed=true;
           const name=card.querySelector('.ex-name')?.textContent;
           const key=getKey(currentWeek,currentDay);
           if(name){setsData[key][name]=0;beepTick();renderContent();}
@@ -830,6 +832,8 @@ function attachSwipeListeners(){
     },{passive:true});
     card.addEventListener('touchend',e=>{
       clearTimeout(pressTimer);
+      if(e.target.closest('.weight-badge')){swipeState=null;return;}
+      if(swipeState?.longPressed){swipeState=null;return;}
       if(!swipeState?.moved){
         const name=card.querySelector('.ex-name')?.textContent;
         if(name){const type=card.classList.contains('main-ex')?'main':'aux';addSet(getKey(currentWeek,currentDay),name,type);}
@@ -837,9 +841,12 @@ function attachSwipeListeners(){
       swipeState=null;
     });
     // mouse long press
-    let mPressTimer=null;
+    let mPressTimer=null,mLongPressed=false;
     card.addEventListener('mousedown',e=>{
+      if(e.target.closest('.weight-badge'))return;
+      mLongPressed=false;
       mPressTimer=setTimeout(()=>{
+        mLongPressed=true;
         const name=card.querySelector('.ex-name')?.textContent;
         const key=getKey(currentWeek,currentDay);
         if(name){setsData[key][name]=0;beepTick();renderContent();}
