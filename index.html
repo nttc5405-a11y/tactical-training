@@ -76,7 +76,18 @@
   .ex-meta{font-size:0.72rem;color:var(--muted);margin-top:2px;}
   .ex-pattern{font-size:0.65rem;color:var(--blue);margin-top:1px;}
   .ex-tap-hint{font-size:0.62rem;color:var(--muted);margin-top:3px;opacity:0.7;}
-  .ex-tag{font-size:0.62rem;letter-spacing:1px;font-weight:700;padding:2px 6px;border-radius:4px;flex-shrink:0;align-self:flex-start;margin-top:2px;}
+  .ex-tag{font-size:0.62rem;letter-spacing:1px;font-weight:700;padding:2px 6px;border-radius:4px;flex-shrink:0;align-self:flex-end;margin-top:2px;}
+  .ex-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;}
+  .weight-badge{
+    min-width:54px;height:32px;padding:0 10px;
+    border:1.5px dashed var(--border);border-radius:8px;
+    display:flex;align-items:center;justify-content:center;gap:2px;
+    cursor:pointer;transition:all .2s;
+    background:rgba(255,255,255,0.02);
+  }
+  .weight-badge:hover{border-color:var(--accent);background:rgba(232,255,0,0.06);}
+  .weight-badge .weight-val{font-family:'Bebas Neue',sans-serif;font-size:1.05rem;color:var(--text);line-height:1;}
+  .weight-badge .weight-unit{font-size:0.6rem;color:var(--muted);}
   .main-tag{background:rgba(232,255,0,0.12);color:var(--accent);}
   .aux-tag{background:rgba(255,77,0,0.12);color:var(--accent2);}
   .swipe-actions{position:absolute;right:0;top:0;bottom:0;width:90px;display:flex;flex-direction:column;pointer-events:none;opacity:0;transition:opacity .2s;}
@@ -223,6 +234,32 @@
   .clear-history-btn{padding:7px 16px;border-radius:999px;border:1px solid var(--border);background:none;color:var(--muted);font-size:0.78rem;cursor:pointer;transition:all .2s;}
   .clear-history-btn:hover{border-color:var(--accent2);color:var(--accent2);}
 
+  /* ── Weight Modal ── */
+  .weight-modal .modal{max-width:380px;text-align:center;}
+  .weight-stepper{display:flex;align-items:center;justify-content:center;gap:6px;margin:14px 0;flex-wrap:wrap;}
+  .weight-step-btn{
+    width:52px;height:52px;border-radius:50%;
+    border:1px solid var(--border);background:var(--card);
+    color:var(--text);font-size:0.78rem;font-weight:600;
+    cursor:pointer;transition:all .2s;flex-shrink:0;
+  }
+  .weight-step-btn:hover{border-color:var(--accent2);color:var(--accent2);}
+  .weight-step-btn.plus:hover{border-color:var(--accent);color:var(--accent);}
+  .weight-display-wrap{
+    display:flex;align-items:baseline;gap:4px;
+    margin:6px auto;min-width:120px;justify-content:center;
+  }
+  .weight-input{
+    width:100px;background:none;border:none;border-bottom:2px solid var(--accent);
+    color:var(--accent);font-family:'Bebas Neue',sans-serif;font-size:2.6rem;
+    text-align:center;letter-spacing:2px;
+  }
+  .weight-input:focus{outline:none;}
+  .weight-input-unit{color:var(--muted);font-size:1rem;}
+  /* hide number input spinners */
+  .weight-input::-webkit-outer-spin-button,.weight-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+  .weight-input[type=number]{-moz-appearance:textfield;}
+
   /* ── Finish Modal ── */
   .finish-modal .modal{text-align:center;}
   .finish-icon{font-size:3rem;margin-bottom:10px;}
@@ -336,6 +373,33 @@
 
 <!-- Screenshot overlay -->
 <div id="shotOverlay"><div class="shot-spinner"></div><div class="shot-msg">正在擷取頁面…</div></div>
+
+<!-- Weight Editor Modal -->
+<div class="modal-overlay hidden" id="weightModal" onclick="closeWeightIfBg(event)">
+  <div class="modal weight-modal">
+    <div class="modal-header">
+      <div class="modal-title" id="weightModalTitle">重量設定</div>
+      <button class="modal-close" onclick="closeWeightEditor()">✕</button>
+    </div>
+    <div class="weight-stepper">
+      <button class="weight-step-btn" onclick="stepWeight(-20)">−20</button>
+      <button class="weight-step-btn" onclick="stepWeight(-10)">−10</button>
+      <button class="weight-step-btn" onclick="stepWeight(-5)">−5</button>
+      <button class="weight-step-btn" onclick="stepWeight(-1)">−1</button>
+    </div>
+    <div class="weight-display-wrap">
+      <input type="number" class="weight-input" id="weightInput" step="1" min="0">
+      <span class="weight-input-unit">kg</span>
+    </div>
+    <div class="weight-stepper">
+      <button class="weight-step-btn plus" onclick="stepWeight(1)">+1</button>
+      <button class="weight-step-btn plus" onclick="stepWeight(5)">+5</button>
+      <button class="weight-step-btn plus" onclick="stepWeight(10)">+10</button>
+      <button class="weight-step-btn plus" onclick="stepWeight(20)">+20</button>
+    </div>
+    <button class="save-btn" onclick="saveWeight()">確定</button>
+  </div>
+</div>
 
 <!-- Finish Modal -->
 <div class="modal-overlay hidden finish-modal" id="finishModal">
@@ -541,7 +605,15 @@ const schedule={
 };
 
 let currentWeek=1,currentDay=1;
-let setsData={},perExSets={},dayConfig={};
+let setsData={},perExSets={},dayConfig={},weightData={};
+
+function getWeight(key,exName){
+  return (weightData[key]&&weightData[key][exName])||0;
+}
+function setWeight(key,exName,val){
+  if(!weightData[key])weightData[key]={};
+  weightData[key][exName]=Math.max(0,val);
+}
 
 function getKey(w,d){return `w${w}d${d}`;}
 function getTotalSets(key,exName,type){
@@ -585,7 +657,7 @@ function renderDayNav(){
   const labels=['第一練','第二練'];
   document.getElementById('dayNav').innerHTML=days.map((d,i)=>{
     const btn=`<button class="day-btn ${d===currentDay?'active':''}" data-day="${d}" onclick="switchDay(${d})">${labels[i]||'Day '+d}</button>`;
-    const restGap=i===0?'<span class="rest-gap">😴 中間休息 1–2 天</span>':'';
+    const restGap=i===0?'<span class="rest-gap">😴 中間休息 2–3 天</span>':'';
     return btn+restGap;
   }).join('');
 }
@@ -628,6 +700,7 @@ function exCard(ex,type,key){
   const pips=Array.from({length:total},(_,i)=>`<div class="pip ${i<done?'filled':''}"></div>`).join('');
   const safeName=ex.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
   const patternHint=ex.note?`<div class="ex-pattern">${ex.note}</div>`:'';
+  const weight=getWeight(key,ex.name);
   return `
   <div class="ex-wrap">
     <div class="ex-swipe-bg"><span class="swipe-label">← −組 / +組</span></div>
@@ -642,7 +715,12 @@ function exCard(ex,type,key){
         <div class="set-pips">${pips}</div>
         <div class="ex-tap-hint">${allDone?'✓ 完成 · 長按重置':'點擊記錄 · 左滑調整'}</div>
       </div>
-      <span class="ex-tag ${type}-tag">${type==='main'?'主項':'副項'}</span>
+      <div class="ex-side">
+        <div class="weight-badge" onclick="openWeightEditor('${key}','${safeName}',${weight});event.stopPropagation()">
+          <span class="weight-val">${weight>0?weight:'＋'}</span>${weight>0?'<span class="weight-unit">kg</span>':''}
+        </div>
+        <span class="ex-tag ${type}-tag">${type==='main'?'主項':'副項'}</span>
+      </div>
     </div>
     <div class="swipe-actions" id="actions_${CSS.escape(ex.name)}">
       <button class="swipe-act-btn sa-minus" onclick="adjustSets('${key}','${safeName}','${type}',-1);event.stopPropagation()">
@@ -681,6 +759,35 @@ function adjustSets(key,name,type,delta){
 function resetDay(){
   const key=getKey(currentWeek,currentDay);
   setsData[key]={};renderContent();
+}
+
+// ══════════════════════════════
+// Weight Editor
+// ══════════════════════════════
+let weightEditKey=null,weightEditName=null;
+function openWeightEditor(key,name,currentVal){
+  resumeAudio();
+  weightEditKey=key;weightEditName=name;
+  document.getElementById('weightModalTitle').textContent=name;
+  document.getElementById('weightInput').value=currentVal>0?currentVal:'';
+  document.getElementById('weightModal').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('weightInput').focus(),100);
+}
+function closeWeightEditor(){document.getElementById('weightModal').classList.add('hidden');}
+function closeWeightIfBg(e){if(e.target===document.getElementById('weightModal'))closeWeightEditor();}
+function stepWeight(delta){
+  const input=document.getElementById('weightInput');
+  const cur=parseFloat(input.value)||0;
+  const next=Math.max(0,cur+delta);
+  input.value=next;
+  beepAdjust(delta>0);
+}
+function saveWeight(){
+  const val=parseFloat(document.getElementById('weightInput').value)||0;
+  setWeight(weightEditKey,weightEditName,val);
+  closeWeightEditor();
+  beepTick();
+  renderContent();
 }
 
 // ══════════════════════════════
@@ -777,7 +884,8 @@ function saveToHistory(){
     note:e.note||'',
     type:e.type,
     doneSets:setsData[key][e.name]||0,
-    totalSets:getTotalSets(key,e.name,e.type)
+    totalSets:getTotalSets(key,e.name,e.type),
+    weight:getWeight(key,e.name)
   }));
   const doneCount=allEx.filter(e=>(setsData[key][e.name]||0)>=getTotalSets(key,e.name,e.type)).length;
   const totalSets=allEx.reduce((sum,e)=>sum+(setsData[key][e.name]||0),0);
@@ -821,7 +929,7 @@ function renderHistory(){
     const exRows=r.exercises.map(e=>`
       <div class="history-ex-row">
         <span class="ex-n">${e.name}</span>
-        <span class="ex-s">${e.doneSets}/${e.totalSets} 組</span>
+        <span class="ex-s">${e.weight>0?e.weight+'kg · ':''}${e.doneSets}/${e.totalSets} 組</span>
       </div>`).join('');
     return `
     <div class="history-card">
@@ -1029,6 +1137,7 @@ function saveEditor(){
 // Init
 // ══════════════════════════════
 buildCycleDots();renderDayNav();renderContent();updateHiitUI();syncRestUI();
+document.getElementById('weightInput').addEventListener('keydown',e=>{if(e.key==='Enter')saveWeight();});
 setTimeout(checkSticky,200);
 </script>
 </body>
