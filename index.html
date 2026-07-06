@@ -279,6 +279,15 @@
   .shot-spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg);}}
   .shot-msg{color:var(--text);font-size:0.88rem;}
+
+  /* ── Profile badge & modal ── */
+  .profile-btn{background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:999px;padding:5px 12px;font-size:0.75rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px;white-space:nowrap;}
+  .profile-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .profile-modal .modal{max-width:380px;}
+
+  /* ── Upload Toast ── */
+  #uploadToast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(20px);background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:8px 18px;font-size:0.8rem;color:var(--text);opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;z-index:1500;white-space:nowrap;}
+  #uploadToast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 </style>
 </head>
 <body>
@@ -296,6 +305,7 @@
   <header>
     <div class="logo">TRAIN<span>BLOCK</span></div>
     <div class="header-badges">
+      <button class="profile-btn" onclick="openProfileEditor()" id="profileBtn">👤 設定單位／姓名</button>
     </div>
   </header>
   <div class="week-tabs">
@@ -403,6 +413,28 @@
   </div>
 </div>
 
+<!-- Profile Modal (單位／姓名) -->
+<div class="modal-overlay hidden profile-modal" id="profileModal" onclick="closeProfileIfBg(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">個人資料</div>
+      <button class="modal-close" onclick="closeProfileEditor()">✕</button>
+    </div>
+    <div class="editor-row">
+      <span class="editor-label" style="min-width:56px;">單位</span>
+      <input class="editor-input" id="profileUnit" placeholder="例：臺東分隊">
+    </div>
+    <div class="editor-row">
+      <span class="editor-label" style="min-width:56px;">姓名</span>
+      <input class="editor-input" id="profileName" placeholder="例：王小明">
+    </div>
+    <button class="save-btn" onclick="saveProfile()">儲存</button>
+  </div>
+</div>
+
+<!-- Upload Toast -->
+<div id="uploadToast"></div>
+
 <!-- Finish Modal -->
 <div class="modal-overlay hidden finish-modal" id="finishModal">
   <div class="modal">
@@ -480,6 +512,14 @@
 </div>
 
 <script>
+// ══════════════════════════════
+// ☁️ Google Sheets 雲端上傳設定
+// ══════════════════════════════
+// 請依照「設定說明.md」的步驟，把你部署好的 Google Apps Script 網址貼在下面的引號內。
+// 例如：const GAS_URL = 'https://script.google.com/macros/s/AKfycb.../exec';
+// 若保持空字串 ''，App 只會存在手機/電腦本機，不會上傳，也不會出現任何錯誤。
+const GAS_URL = ''; // ← 完成「設定說明.md」步驟後，把 Apps Script 網址貼在引號內
+
 // ══════════════════════════════
 // Audio
 // ══════════════════════════════
@@ -799,6 +839,48 @@ function saveWeight(){
 }
 
 // ══════════════════════════════
+// 個人資料（單位／姓名）
+// ══════════════════════════════
+function getProfile(){
+  try{return JSON.parse(localStorage.getItem('trainblock_profile')||'{"unit":"","name":""}');}
+  catch{return{unit:'',name:''};}
+}
+function setProfile(unit,name){
+  localStorage.setItem('trainblock_profile',JSON.stringify({unit,name}));
+}
+function hasProfile(){
+  const p=getProfile();
+  return !!(p.unit&&p.unit.trim()&&p.name&&p.name.trim());
+}
+function updateProfileBtn(){
+  const p=getProfile(),btn=document.getElementById('profileBtn');
+  if(!btn)return;
+  btn.textContent=hasProfile()?`👤 ${p.unit}·${p.name}`:'👤 設定單位／姓名';
+}
+// afterSaveCallback：儲存個人資料後，若是從「完成訓練」流程觸發，要接著繼續完成
+let profileSaveCallback=null;
+function openProfileEditor(afterSave){
+  profileSaveCallback=typeof afterSave==='function'?afterSave:null;
+  const p=getProfile();
+  document.getElementById('profileUnit').value=p.unit||'';
+  document.getElementById('profileName').value=p.name||'';
+  document.getElementById('profileModal').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('profileUnit').focus(),100);
+}
+function closeProfileEditor(){document.getElementById('profileModal').classList.add('hidden');}
+function closeProfileIfBg(e){if(e.target===document.getElementById('profileModal'))closeProfileEditor();}
+function saveProfile(){
+  const unit=document.getElementById('profileUnit').value.trim();
+  const name=document.getElementById('profileName').value.trim();
+  if(!unit||!name){alert('請輸入單位與姓名');return;}
+  setProfile(unit,name);
+  updateProfileBtn();
+  closeProfileEditor();
+  const cb=profileSaveCallback;profileSaveCallback=null;
+  if(cb)cb();
+}
+
+// ══════════════════════════════
 // Swipe Gestures
 // ══════════════════════════════
 let swipeState=null;
@@ -870,6 +952,11 @@ function attachSwipeListeners(){
 // Finish Day & History
 // ══════════════════════════════
 function openFinish(){
+  // 尚未設定單位／姓名 → 先跳出個人資料 modal，填完後自動繼續完成流程
+  if(!hasProfile()){
+    openProfileEditor(()=>openFinish());
+    return;
+  }
   const key=getKey(currentWeek,currentDay);
   const data=schedule[currentWeek][currentDay];
   const allEx=[...data.main.map(e=>({...e,type:'main'})),...data.aux.map(e=>({...e,type:'aux'}))];
@@ -904,8 +991,11 @@ function saveToHistory(){
   }));
   const doneCount=allEx.filter(e=>(setsData[key][e.name]||0)>=getTotalSets(key,e.name,e.type)).length;
   const totalSets=allEx.reduce((sum,e)=>sum+(setsData[key][e.name]||0),0);
+  const profile=getProfile();
   const record={
     id:Date.now(),
+    unit:profile.unit||'',
+    name:profile.name||'',
     week:currentWeek,day:currentDay,
     date:new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'}),
     time:new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'}),
@@ -919,6 +1009,64 @@ function saveToHistory(){
   // keep last 60
   if(hist.length>60)hist.splice(60);
   localStorage.setItem('trainblock_history',JSON.stringify(hist));
+  // 本機儲存成功後，嘗試上傳雲端（GAS_URL 為空則不執行）
+  uploadRecord(record);
+}
+
+// ══════════════════════════════
+// ☁️ 上傳到 Google Sheets
+// ══════════════════════════════
+function showUploadToast(msg){
+  const el=document.getElementById('uploadToast');
+  if(!el)return;
+  el.textContent=msg;el.classList.add('show');
+  clearTimeout(showUploadToast._t);
+  showUploadToast._t=setTimeout(()=>el.classList.remove('show'),3000);
+}
+function getUploadQueue(){
+  try{return JSON.parse(localStorage.getItem('trainblock_upload_queue')||'[]');}catch{return[];}
+}
+function setUploadQueue(q){localStorage.setItem('trainblock_upload_queue',JSON.stringify(q));}
+function buildPayload(record){
+  const profile=getProfile();
+  return{unit:profile.unit||'',name:profile.name||'',record,isoTime:new Date().toISOString()};
+}
+async function sendToGAS(payload){
+  const res=await fetch(GAS_URL,{
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify(payload)
+  });
+  const data=await res.json();
+  if(!data||data.status!=='ok')throw new Error((data&&data.message)||'上傳失敗');
+  return data;
+}
+async function uploadRecord(record){
+  if(!GAS_URL){return;} // 未設定雲端網址 → 純本機模式，不上傳不報錯
+  const payload=buildPayload(record);
+  try{
+    await sendToGAS(payload);
+    showUploadToast('☁️ 已上傳雲端');
+    // 上傳成功後，順手嘗試補傳佇列中其他失敗紀錄
+    flushUploadQueue();
+  }catch(err){
+    const q=getUploadQueue();
+    q.push(payload);
+    setUploadQueue(q);
+    showUploadToast('⚠️ 已存本機，網路恢復後自動補傳');
+  }
+}
+async function flushUploadQueue(){
+  if(!GAS_URL)return;
+  let q=getUploadQueue();
+  if(!q.length)return;
+  const remaining=[];
+  for(const payload of q){
+    try{await sendToGAS(payload);}
+    catch(err){remaining.push(payload);}
+  }
+  setUploadQueue(remaining);
+  if(q.length&&!remaining.length)showUploadToast('☁️ 已補傳完成');
 }
 function getHistory(){
   try{return JSON.parse(localStorage.getItem('trainblock_history')||'[]');}catch{return[];}
@@ -951,7 +1099,7 @@ function renderHistory(){
       <div class="history-card-header">
         <div>
           <div class="history-card-title">Week ${r.week} · ${r.day%2===1?'第一練':'第二練'}</div>
-          <div class="history-card-date">${r.date} ${r.time} · ${r.pct}</div>
+          <div class="history-card-date">${r.date} ${r.time} · ${r.pct}${r.name?' · '+r.name:''}</div>
         </div>
         <button class="history-del-btn" onclick="deleteHistoryRecord(${r.id})">刪除</button>
       </div>
@@ -1151,9 +1299,11 @@ function saveEditor(){
 // ══════════════════════════════
 // Init
 // ══════════════════════════════
-buildCycleDots();renderDayNav();renderContent();updateHiitUI();syncRestUI();
+buildCycleDots();renderDayNav();renderContent();updateHiitUI();syncRestUI();updateProfileBtn();
 document.getElementById('weightInput').addEventListener('keydown',e=>{if(e.key==='Enter')saveWeight();});
 setTimeout(checkSticky,200);
+// 載入時嘗試補傳先前失敗的雲端上傳紀錄
+flushUploadQueue();
 </script>
 </body>
 </html>
