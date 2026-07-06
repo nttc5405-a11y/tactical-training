@@ -11,12 +11,11 @@
     --accent:#e8ff00;--accent2:#ff4d00;--text:#f0f0f0;--muted:#888;
     --blue:#4af;
   }
-  :root.hc{
-    --bg:#000;--surface:#000;--card:#000;--border:#fff;
-    --accent:#ffff00;--accent2:#ff3b3b;--text:#fff;--muted:#d8d8d8;
-    --blue:#4dd0ff;
+  :root.light{
+    --bg:#f7f7f5;--surface:#ffffff;--card:#ffffff;--border:#dcdcdc;
+    --accent:#b8860b;--accent2:#c1440e;--text:#1a1a1a;--muted:#6b6b6b;
+    --blue:#0077b6;
   }
-  .hc .ex-card,.hc .modal{border-width:2px;}
   *{box-sizing:border-box;margin:0;padding:0;}
   body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',sans-serif;min-height:100vh;padding-bottom:90px;}
 
@@ -353,7 +352,7 @@
 
 <!-- FAB -->
 <div class="fab-row">
-  <button class="fab-btn" id="contrastToggleBtn" onclick="toggleContrast()">🌓 高對比</button>
+  <button class="fab-btn" id="lightModeBtn" onclick="toggleLightMode()">☀️ 日間模式</button>
   <button class="fab-btn" onclick="takeScreenshot()">📸 截圖</button>
   <button class="fab-btn" onclick="openEditor()">⚙️ 編輯課表</button>
 </div>
@@ -1231,24 +1230,24 @@ function saveEditor(){
 }
 
 // ══════════════════════════════
-// 高對比模式
+// 日間／夜間模式
 // ══════════════════════════════
-function applyContrast(on){
-  document.documentElement.classList.toggle('hc',on);
-  const btn=document.getElementById('contrastToggleBtn');
-  if(btn)btn.textContent=on?'☀️ 一般對比':'🌓 高對比';
+function applyLightMode(on){
+  document.documentElement.classList.toggle('light',on);
+  const btn=document.getElementById('lightModeBtn');
+  if(btn)btn.textContent=on?'🌙 夜間模式':'☀️ 日間模式';
 }
-function toggleContrast(){
-  const on=!document.documentElement.classList.contains('hc');
-  localStorage.setItem('trainblock_hc',on?'1':'0');
-  applyContrast(on);
+function toggleLightMode(){
+  const on=!document.documentElement.classList.contains('light');
+  localStorage.setItem('trainblock_light',on?'1':'0');
+  applyLightMode(on);
 }
 
 // ══════════════════════════════
 // Init
 // ══════════════════════════════
 buildCycleDots();renderDayNav();renderContent();updateHiitUI();syncRestUI();updateProfileBtn();
-applyContrast(localStorage.getItem('trainblock_hc')==='1');
+applyLightMode(localStorage.getItem('trainblock_light')==='1');
 document.getElementById('weightInput').addEventListener('keydown',e=>{if(e.key==='Enter')saveWeight();});
 setTimeout(checkSticky,200);
 // 載入時嘗試補傳先前失敗的雲端上傳紀錄

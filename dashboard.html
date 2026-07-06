@@ -10,9 +10,9 @@
     --bg:#0f0f0f;--surface:#1a1a1a;--card:#222;--border:#2e2e2e;
     --accent:#e8ff00;--accent2:#ff4d00;--text:#f0f0f0;--muted:#888;
   }
-  :root.hc{
-    --bg:#000;--surface:#000;--card:#000;--border:#fff;
-    --accent:#ffff00;--accent2:#ff3b3b;--text:#fff;--muted:#d8d8d8;
+  :root.light{
+    --bg:#f7f7f5;--surface:#ffffff;--card:#ffffff;--border:#dcdcdc;
+    --accent:#b8860b;--accent2:#c1440e;--text:#1a1a1a;--muted:#6b6b6b;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',sans-serif;min-height:100vh;padding-bottom:40px;}
@@ -23,9 +23,9 @@
   .back-link:hover{border-color:var(--accent);color:var(--accent);}
 
   .filters{display:flex;gap:10px;flex-wrap:wrap;padding:16px 20px;border-bottom:1px solid var(--border);}
-  select,.hc-btn,.refresh-btn{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 12px;font-size:0.85rem;font-family:inherit;cursor:pointer;}
+  select,.light-btn,.refresh-btn{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 12px;font-size:0.85rem;font-family:inherit;cursor:pointer;}
   select{min-width:140px;}
-  .refresh-btn:hover,.hc-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .refresh-btn:hover,.light-btn:hover{border-color:var(--accent);color:var(--accent);}
 
   .notice{margin:16px 20px;padding:14px 16px;border:1px solid var(--accent2);border-radius:10px;color:var(--text);font-size:0.85rem;line-height:1.7;background:rgba(255,77,0,0.08);}
   .notice.hidden{display:none;}
@@ -66,7 +66,7 @@
   <select id="filterName"><option value="">全部人員</option></select>
   <select id="filterExercise"><option value="">全部動作</option></select>
   <button class="refresh-btn" onclick="loadData()">🔄 重新整理</button>
-  <button class="hc-btn" onclick="toggleContrast()" id="contrastBtn">🌓 高對比</button>
+  <button class="light-btn" onclick="toggleLightMode()" id="lightModeBtn">☀️ 日間模式</button>
 </div>
 
 <div class="summary" id="summary"></div>
@@ -102,15 +102,15 @@ function escapeHtml(s){
   return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-function applyContrast(on){
-  document.documentElement.classList.toggle('hc',on);
-  const btn=document.getElementById('contrastBtn');
-  if(btn)btn.textContent=on?'☀️ 一般對比':'🌓 高對比';
+function applyLightMode(on){
+  document.documentElement.classList.toggle('light',on);
+  const btn=document.getElementById('lightModeBtn');
+  if(btn)btn.textContent=on?'🌙 夜間模式':'☀️ 日間模式';
 }
-function toggleContrast(){
-  const on=!document.documentElement.classList.contains('hc');
-  localStorage.setItem('trainblock_hc',on?'1':'0');
-  applyContrast(on);
+function toggleLightMode(){
+  const on=!document.documentElement.classList.contains('light');
+  localStorage.setItem('trainblock_light',on?'1':'0');
+  applyLightMode(on);
   if(allRecords.length)render(); // 重畫圖表以套用新配色
 }
 
@@ -282,7 +282,7 @@ function render(){
 document.getElementById('filterName').addEventListener('change',()=>{populateExerciseFilter();render();});
 document.getElementById('filterExercise').addEventListener('change',render);
 
-applyContrast(localStorage.getItem('trainblock_hc')==='1');
+applyLightMode(localStorage.getItem('trainblock_light')==='1');
 loadData();
 </script>
 </body>
