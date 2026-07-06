@@ -516,7 +516,7 @@
 // ☁️ Google Sheets 雲端上傳設定
 // ══════════════════════════════
 // 請依照「設定說明.md」的步驟，把你部署好的 Google Apps Script 網址貼在下面的引號內。
-// 例如：const GAS_URL = 'https://script.google.com/macros/s/AKfycb.../exec';
+// 例如：const GAS_URL = 'https://script.google.com/macros/s/AKfycbxw-Al9rSxqvMgk0LWXKZG0jujZbaOtXUqNoG3XaQie3wG7fAUpLZEIGY30ErmRiEoh/exec';
 // 若保持空字串 ''，App 只會存在手機/電腦本機，不會上傳，也不會出現任何錯誤。
 const GAS_URL = ''; // ← 完成「設定說明.md」步驟後，把 Apps Script 網址貼在引號內
 
@@ -1082,6 +1082,9 @@ function clearAllHistory(){
   renderHistory();
 }
 
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 function renderHistory(){
   const hist=getHistory();
   const el=document.getElementById('historyContent');
@@ -1091,7 +1094,7 @@ function renderHistory(){
   el.innerHTML='<div class="history-list">'+hist.map(r=>{
     const exRows=r.exercises.map(e=>`
       <div class="history-ex-row">
-        <span class="ex-n">${e.name}</span>
+        <span class="ex-n">${escapeHtml(e.name)}</span>
         <span class="ex-s">${e.weight>0?e.weight+'kg · ':''}${e.doneSets}/${e.totalSets} 組</span>
       </div>`).join('');
     return `
@@ -1099,7 +1102,7 @@ function renderHistory(){
       <div class="history-card-header">
         <div>
           <div class="history-card-title">Week ${r.week} · ${r.day%2===1?'第一練':'第二練'}</div>
-          <div class="history-card-date">${r.date} ${r.time} · ${r.pct}${r.name?' · '+r.name:''}</div>
+          <div class="history-card-date">${r.date} ${r.time} · ${r.pct}${r.name?' · '+escapeHtml(r.name):''}</div>
         </div>
         <button class="history-del-btn" onclick="deleteHistoryRecord(${r.id})">刪除</button>
       </div>
