@@ -11,6 +11,12 @@
     --accent:#e8ff00;--accent2:#ff4d00;--text:#f0f0f0;--muted:#888;
     --blue:#4af;
   }
+  :root.hc{
+    --bg:#000;--surface:#000;--card:#000;--border:#fff;
+    --accent:#ffff00;--accent2:#ff3b3b;--text:#fff;--muted:#d8d8d8;
+    --blue:#4dd0ff;
+  }
+  .hc .ex-card,.hc .modal{border-width:2px;}
   *{box-sizing:border-box;margin:0;padding:0;}
   body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',sans-serif;min-height:100vh;padding-bottom:90px;}
 
@@ -213,27 +219,6 @@
   .lib-add-selected-btn:disabled{opacity:0.3;cursor:default;}
   .lib-divider{border:none;border-top:1px solid var(--border);margin:14px 0;}
 
-  /* ── History Page ── */
-  .page-header{padding:20px 20px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
-  .page-title{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:2px;color:var(--accent);}
-  .history-empty{text-align:center;padding:60px 20px;color:var(--muted);font-size:0.88rem;line-height:1.8;}
-  .history-list{padding:16px 20px;}
-  .history-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;}
-  .history-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px;}
-  .history-card-title{font-weight:700;font-size:0.9rem;}
-  .history-card-date{font-size:0.72rem;color:var(--muted);}
-  .history-stats{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;}
-  .h-stat .val{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--accent);line-height:1;}
-  .h-stat .lbl{font-size:0.6rem;color:var(--muted);letter-spacing:1px;}
-  .history-exlist{display:flex;flex-direction:column;gap:4px;}
-  .history-ex-row{display:flex;align-items:center;justify-content:space-between;font-size:0.75rem;color:var(--muted);padding:4px 0;border-top:1px solid var(--border);}
-  .history-ex-row .ex-n{color:var(--text);}
-  .history-ex-row .ex-s{color:var(--accent);}
-  .history-del-btn{background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:3px 8px;font-size:0.72rem;cursor:pointer;transition:all .2s;flex-shrink:0;}
-  .history-del-btn:hover{border-color:var(--accent2);color:var(--accent2);}
-  .clear-history-btn{padding:7px 16px;border-radius:999px;border:1px solid var(--border);background:none;color:var(--muted);font-size:0.78rem;cursor:pointer;transition:all .2s;}
-  .clear-history-btn:hover{border-color:var(--accent2);color:var(--accent2);}
-
   /* ── Weight Modal ── */
   .weight-modal .modal{max-width:380px;text-align:center;}
   .weight-stepper{display:flex;align-items:center;justify-content:center;gap:5px;margin:14px 0;flex-wrap:wrap;}
@@ -296,7 +281,7 @@
 <div class="top-tabs">
   <button class="top-tab active" onclick="switchPage('workout')">📋 課表</button>
   <button class="top-tab" onclick="switchPage('timer')">⏱ 計時</button>
-  <button class="top-tab" onclick="switchPage('history')">📊 歷史</button>
+  <button class="top-tab" onclick="window.open('dashboard.html','_blank')">📈 儀表板</button>
   <button class="top-tab" onclick="window.open('https://drive.google.com/drive/folders/1x9-kvyzQF6rXZ97y4VlzGBywM3JkxQLY?usp=sharing','_blank')">📚 教材</button>
 </div>
 
@@ -357,15 +342,6 @@
   </div>
 </div>
 
-<!-- ══════════ PAGE: HISTORY ══════════ -->
-<div id="page-history" class="page">
-  <div class="page-header">
-    <div class="page-title">訓練歷史</div>
-    <button class="clear-history-btn" onclick="clearAllHistory()">清除全部</button>
-  </div>
-  <div id="historyContent"></div>
-</div>
-
 <!-- Sticky Timer (shows on workout page when scrolled) -->
 <div id="stickyTimer">
   <div class="sticky-label">組間</div>
@@ -377,6 +353,7 @@
 
 <!-- FAB -->
 <div class="fab-row">
+  <button class="fab-btn" id="contrastToggleBtn" onclick="toggleContrast()">🌓 高對比</button>
   <button class="fab-btn" onclick="takeScreenshot()">📸 截圖</button>
   <button class="fab-btn" onclick="openEditor()">⚙️ 編輯課表</button>
 </div>
@@ -679,9 +656,8 @@ function switchPage(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.top-tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
-  const idx={workout:0,timer:1,history:2}[name];
+  const idx={workout:0,timer:1}[name];
   document.querySelectorAll('.top-tab')[idx].classList.add('active');
-  if(name==='history')renderHistory();
   // sticky timer only on workout page
   checkSticky();
 }
@@ -790,8 +766,6 @@ function addSet(key,name,type){
   const cur=setsData[key][name]||0;
   if(cur>=total)return;
   setsData[key][name]=cur+1;
-  beepTick();
-  if(setsData[key][name]>=total)setTimeout(beepDone,50);
   renderContent();
 }
 function adjustSets(key,name,type,delta){
@@ -1071,49 +1045,6 @@ async function flushUploadQueue(){
 function getHistory(){
   try{return JSON.parse(localStorage.getItem('trainblock_history')||'[]');}catch{return[];}
 }
-function deleteHistoryRecord(id){
-  const hist=getHistory().filter(r=>r.id!==id);
-  localStorage.setItem('trainblock_history',JSON.stringify(hist));
-  renderHistory();
-}
-function clearAllHistory(){
-  if(!confirm('確定清除所有訓練紀錄？'))return;
-  localStorage.removeItem('trainblock_history');
-  renderHistory();
-}
-
-function escapeHtml(s){
-  return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-function renderHistory(){
-  const hist=getHistory();
-  const el=document.getElementById('historyContent');
-  if(!hist.length){
-    el.innerHTML='<div class="history-empty">📭 尚無訓練紀錄<br>完成一次訓練後自動儲存</div>';return;
-  }
-  el.innerHTML='<div class="history-list">'+hist.map(r=>{
-    const exRows=r.exercises.map(e=>`
-      <div class="history-ex-row">
-        <span class="ex-n">${escapeHtml(e.name)}</span>
-        <span class="ex-s">${e.weight>0?e.weight+'kg · ':''}${e.doneSets}/${e.totalSets} 組</span>
-      </div>`).join('');
-    return `
-    <div class="history-card">
-      <div class="history-card-header">
-        <div>
-          <div class="history-card-title">Week ${r.week} · ${r.day%2===1?'第一練':'第二練'}</div>
-          <div class="history-card-date">${r.date} ${r.time} · ${r.pct}${r.name?' · '+escapeHtml(r.name):''}</div>
-        </div>
-        <button class="history-del-btn" onclick="deleteHistoryRecord(${r.id})">刪除</button>
-      </div>
-      <div class="history-stats">
-        <div class="h-stat"><div class="val">${r.totalSets}</div><div class="lbl">完成組數</div></div>
-        <div class="h-stat"><div class="val">${r.completion}%</div><div class="lbl">完成率</div></div>
-      </div>
-      <div class="history-exlist">${exRows}</div>
-    </div>`;
-  }).join('')+'</div>';
-}
 
 // ══════════════════════════════
 // Rest Timer
@@ -1300,9 +1231,24 @@ function saveEditor(){
 }
 
 // ══════════════════════════════
+// 高對比模式
+// ══════════════════════════════
+function applyContrast(on){
+  document.documentElement.classList.toggle('hc',on);
+  const btn=document.getElementById('contrastToggleBtn');
+  if(btn)btn.textContent=on?'☀️ 一般對比':'🌓 高對比';
+}
+function toggleContrast(){
+  const on=!document.documentElement.classList.contains('hc');
+  localStorage.setItem('trainblock_hc',on?'1':'0');
+  applyContrast(on);
+}
+
+// ══════════════════════════════
 // Init
 // ══════════════════════════════
 buildCycleDots();renderDayNav();renderContent();updateHiitUI();syncRestUI();updateProfileBtn();
+applyContrast(localStorage.getItem('trainblock_hc')==='1');
 document.getElementById('weightInput').addEventListener('keydown',e=>{if(e.key==='Enter')saveWeight();});
 setTimeout(checkSticky,200);
 // 載入時嘗試補傳先前失敗的雲端上傳紀錄

@@ -9,7 +9,7 @@
 const SHEET_NAME = '訓練紀錄';
 const HEADERS = [
   '上傳時間', '訓練日期', '訓練時間', '單位', '姓名',
-  '週次', '訓練', '完成率%', '完成組數', '動作明細', '紀錄ID'
+  '週次', '訓練', '完成率%', '完成組數', '動作明細', '紀錄ID', '動作明細JSON'
 ];
 
 /**
@@ -73,7 +73,8 @@ function doPost(e) {
       record.completion != null ? record.completion : '',
       record.totalSets != null ? record.totalSets : '',
       exerciseDetail,
-      record.id
+      record.id,
+      JSON.stringify(record.exercises || [])
     ]);
 
     return jsonResponse({ status: 'ok' });
@@ -120,6 +121,8 @@ function isDuplicate(sheet, recordId, name) {
 
 /**
  * 取得「訓練紀錄」工作表，不存在就建立並寫入表頭。
+ * 如果是舊版表頭（缺少最後的「動作明細JSON」欄），自動補上，
+ * 這樣即使你在更新程式碼前已經測試過幾筆資料，也不需要手動處理。
  */
 function getOrCreateSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -133,9 +136,51 @@ function getOrCreateSheet() {
     // 工作表存在但是空的，也要補上表頭
     sheet.appendRow(HEADERS);
     sheet.setFrozenRows(1);
+  } else {
+    const headerRange = sheet.getRange(1, 1, 1, sheet.getLastColumn());
+    const currentHeaders = headerRange.getValues()[0];
+    if (currentHeaders[currentHeaders.length - 1] !== HEADERS[HEADERS.length - 1]) {
+      sheet.getRange(1, HEADERS.length).setValue(HEADERS[HEADERS.length - 1]);
+    }
   }
 
   return sheet;
+}
+
+/**
+ * 讀取所有訓練紀錄，給「儀表板」頁面用。
+ * 回傳格式：陣列，每一筆是 {uploadTime, date, time, unit, name, week,
+ * dayLabel, completion, totalSets, detailText, id, exercises}
+ * exercises 是陣列，每個動作 {name, note, type, doneSets, totalSets, weight}。
+ */
+function readAllRecords() {
+  const sheet = getOrCreateSheet();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+
+  const values = sheet.getRange(2, 1, lastRow - 1, HEADERS.length).getValues();
+  return values.map(function (row) {
+    let exercises = [];
+    try {
+      exercises = row[11] ? JSON.parse(row[11]) : [];
+    } catch (e) {
+      exercises = [];
+    }
+    return {
+      uploadTime: (row[0] instanceof Date) ? row[0].toISOString() : String(row[0]),
+      date: row[1],
+      time: row[2],
+      unit: row[3],
+      name: row[4],
+      week: row[5],
+      dayLabel: row[6],
+      completion: row[7],
+      totalSets: row[8],
+      detailText: row[9],
+      id: row[10],
+      exercises: exercises
+    };
+  });
 }
 
 /**
@@ -148,10 +193,16 @@ function jsonResponse(obj) {
 }
 
 /**
- * 可選：用瀏覽器直接打開網頁應用程式網址時的測試回應，
+ * 用瀏覽器直接打開網頁應用程式網址時的測試回應，
  * 方便你確認部署是否成功（不影響 App 的上傳功能）。
+ *
+ * 「儀表板」頁面（dashboard.html）會用網址後面加上 ?data=1 的方式，
+ * 呼叫這個函式取得全部訓練紀錄的 JSON 資料，供篩選/圖表使用。
  */
 function doGet(e) {
+  if (e && e.parameter && e.parameter.data === '1') {
+    return jsonResponse({ status: 'ok', records: readAllRecords() });
+  }
   return ContentService
     .createTextOutput('戰術體能訓練 App 的 Apps Script 已成功部署，可以開始使用。')
     .setMimeType(ContentService.MimeType.TEXT);

@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>訓練儀表板</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+  :root{
+    --bg:#0f0f0f;--surface:#1a1a1a;--card:#222;--border:#2e2e2e;
+    --accent:#e8ff00;--accent2:#ff4d00;--text:#f0f0f0;--muted:#888;
+  }
+  :root.hc{
+    --bg:#000;--surface:#000;--card:#000;--border:#fff;
+    --accent:#ffff00;--accent2:#ff3b3b;--text:#fff;--muted:#d8d8d8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',sans-serif;min-height:100vh;padding-bottom:40px;}
+  header{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+  .logo{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:3px;color:var(--accent);}
+  .logo span{color:var(--text);}
+  .back-link{color:var(--muted);font-size:0.82rem;text-decoration:none;border:1px solid var(--border);border-radius:999px;padding:6px 14px;transition:all .2s;}
+  .back-link:hover{border-color:var(--accent);color:var(--accent);}
+
+  .filters{display:flex;gap:10px;flex-wrap:wrap;padding:16px 20px;border-bottom:1px solid var(--border);}
+  select,.hc-btn,.refresh-btn{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 12px;font-size:0.85rem;font-family:inherit;cursor:pointer;}
+  select{min-width:140px;}
+  .refresh-btn:hover,.hc-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+  .notice{margin:16px 20px;padding:14px 16px;border:1px solid var(--accent2);border-radius:10px;color:var(--text);font-size:0.85rem;line-height:1.7;background:rgba(255,77,0,0.08);}
+  .notice.hidden{display:none;}
+
+  .summary{display:flex;gap:14px;flex-wrap:wrap;padding:16px 20px;}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 18px;min-width:110px;}
+  .stat-card .val{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--accent);line-height:1;}
+  .stat-card .lbl{font-size:0.68rem;color:var(--muted);letter-spacing:1px;margin-top:4px;}
+
+  .chart-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin:0 20px 20px;}
+  .chart-wrap.hidden{display:none;}
+  .chart-hint{padding:0 20px 16px;color:var(--muted);font-size:0.8rem;}
+  .chart-hint.hidden{display:none;}
+
+  .table-wrap{padding:0 20px;overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:0.85rem;min-width:560px;}
+  thead th{position:sticky;top:0;background:var(--surface);color:var(--muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);font-weight:500;white-space:nowrap;}
+  tbody td{padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;}
+  tbody tr:hover{background:var(--surface);}
+  .weight-cell{color:var(--accent);font-weight:700;}
+
+  .empty-state{padding:60px 20px;text-align:center;color:var(--muted);font-size:0.88rem;line-height:1.8;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">TRAIN<span>BLOCK</span> · 儀表板</div>
+  <a href="index.html" class="back-link">← 回訓練 App</a>
+</header>
+
+<div id="setupNotice" class="notice hidden">
+  ⚠️ 尚未設定 GAS_URL。請用記事本打開這個資料夾裡的 <code>dashboard.html</code>，
+  找到 <code>const GAS_URL = ''</code> 這一行，貼上跟 index.html 相同的 Apps Script 網址。
+</div>
+
+<div class="filters">
+  <select id="filterName"><option value="">全部人員</option></select>
+  <select id="filterExercise"><option value="">全部動作</option></select>
+  <button class="refresh-btn" onclick="loadData()">🔄 重新整理</button>
+  <button class="hc-btn" onclick="toggleContrast()" id="contrastBtn">🌓 高對比</button>
+</div>
+
+<div class="summary" id="summary"></div>
+
+<div class="chart-hint hidden" id="chartHint">📈 選擇一個「動作」即可看到重量趨勢圖（選「全部人員」時每人各一條線，方便互相比較）</div>
+<div class="chart-wrap hidden" id="chartWrap">
+  <canvas id="weightChart" height="110"></canvas>
+</div>
+
+<div class="table-wrap">
+  <table id="dataTable" style="display:none;">
+    <thead>
+      <tr>
+        <th>日期</th><th>時間</th><th>單位</th><th>姓名</th>
+        <th>週次／訓練</th><th>動作</th><th>重量</th><th>完成組數</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+  <div id="emptyState" class="empty-state">載入中…</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+// 請貼上跟 index.html 相同的 Google Apps Script 網址（見「設定說明.md」）
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxw-Al9rSxqvMgk0LWXKZG0jujZbaOtXUqNoG3XaQie3wG7fAUpLZEIGY30ErmRiEoh/exec';
+
+const CHART_COLORS=['#e8ff00','#ff4d4d','#4dd0ff','#ff4de0','#4dff88','#ffb84d'];
+let allRecords = [];
+let weightChart = null;
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function applyContrast(on){
+  document.documentElement.classList.toggle('hc',on);
+  const btn=document.getElementById('contrastBtn');
+  if(btn)btn.textContent=on?'☀️ 一般對比':'🌓 高對比';
+}
+function toggleContrast(){
+  const on=!document.documentElement.classList.contains('hc');
+  localStorage.setItem('trainblock_hc',on?'1':'0');
+  applyContrast(on);
+  if(allRecords.length)render(); // 重畫圖表以套用新配色
+}
+
+async function loadData(){
+  const empty=document.getElementById('emptyState');
+  const table=document.getElementById('dataTable');
+  if(!GAS_URL){
+    document.getElementById('setupNotice').classList.remove('hidden');
+    table.style.display='none';
+    empty.style.display='none';
+    return;
+  }
+  empty.textContent='載入中…';
+  empty.style.display='block';
+  table.style.display='none';
+  try{
+    const res=await fetch(GAS_URL+'?data=1');
+    const json=await res.json();
+    if(json.status!=='ok')throw new Error(json.message||'讀取失敗');
+    allRecords=json.records||[];
+    populateNameFilter();
+    populateExerciseFilter();
+    render();
+  }catch(err){
+    empty.innerHTML=`讀取失敗：${escapeHtml(err.message)}<br>請確認 Apps Script 是否已部署為「任何人可存取」，且網址正確。`;
+    empty.style.display='block';
+    table.style.display='none';
+  }
+}
+
+function populateNameFilter(){
+  const sel=document.getElementById('filterName');
+  const cur=sel.value;
+  const names=[...new Set(allRecords.map(r=>r.name).filter(Boolean))].sort();
+  sel.innerHTML='<option value="">全部人員</option>'+names.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+  sel.value=names.includes(cur)?cur:'';
+}
+
+function populateExerciseFilter(){
+  const nameSel=document.getElementById('filterName').value;
+  const sel=document.getElementById('filterExercise');
+  const cur=sel.value;
+  const pool=allRecords.filter(r=>!nameSel||r.name===nameSel);
+  const names=[...new Set(pool.flatMap(r=>(r.exercises||[]).map(e=>e.name)))].sort();
+  sel.innerHTML='<option value="">全部動作</option>'+names.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+  sel.value=names.includes(cur)?cur:'';
+}
+
+function getFilteredRows(){
+  const name=document.getElementById('filterName').value;
+  const exercise=document.getElementById('filterExercise').value;
+  const rows=[];
+  allRecords.forEach(r=>{
+    if(name&&r.name!==name)return;
+    (r.exercises||[]).forEach(ex=>{
+      if(exercise&&ex.name!==exercise)return;
+      rows.push({
+        date:r.date,time:r.time,unit:r.unit,name:r.name,
+        week:r.week,dayLabel:r.dayLabel,
+        exName:ex.name,weight:ex.weight,doneSets:ex.doneSets,totalSets:ex.totalSets
+      });
+    });
+  });
+  rows.sort((a,b)=>String(a.date+a.time).localeCompare(String(b.date+b.time)));
+  return rows;
+}
+
+function getCssVar(name){
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function buildChart(rows){
+  const wrap=document.getElementById('chartWrap');
+  const hint=document.getElementById('chartHint');
+  const exercise=document.getElementById('filterExercise').value;
+  const weighted=exercise?rows.filter(r=>r.weight>0):[];
+
+  if(!exercise||!weighted.length){
+    wrap.classList.add('hidden');
+    hint.classList.toggle('hidden',!!exercise);
+    if(weightChart){weightChart.destroy();weightChart=null;}
+    return;
+  }
+  hint.classList.add('hidden');
+
+  const dateLabels=[...new Set(weighted.map(r=>r.date))];
+  const byName={};
+  weighted.forEach(r=>{
+    if(!byName[r.name])byName[r.name]={};
+    byName[r.name][r.date]=r.weight;
+  });
+  const names=Object.keys(byName);
+  const datasets=names.map((n,i)=>({
+    label:n,
+    data:dateLabels.map(d=>byName[n][d]!=null?byName[n][d]:null),
+    borderColor:CHART_COLORS[i%CHART_COLORS.length],
+    backgroundColor:CHART_COLORS[i%CHART_COLORS.length],
+    spanGaps:true,
+    tension:0.25,
+    pointRadius:4,
+    pointHoverRadius:6
+  }));
+
+  wrap.classList.remove('hidden');
+  const muted=getCssVar('--muted'),border=getCssVar('--border'),text=getCssVar('--text'),accent=getCssVar('--accent');
+  if(weightChart)weightChart.destroy();
+  weightChart=new Chart(document.getElementById('weightChart').getContext('2d'),{
+    type:'line',
+    data:{labels:dateLabels,datasets},
+    options:{
+      responsive:true,
+      interaction:{mode:'nearest',intersect:false},
+      plugins:{
+        legend:{labels:{color:text}},
+        title:{display:true,text:`${exercise} 重量趨勢（kg）`,color:accent,font:{size:14}}
+      },
+      scales:{
+        x:{ticks:{color:muted},grid:{color:border}},
+        y:{ticks:{color:muted},grid:{color:border},title:{display:true,text:'kg',color:muted}}
+      }
+    }
+  });
+}
+
+function render(){
+  const rows=getFilteredRows();
+  const table=document.getElementById('dataTable');
+  const empty=document.getElementById('emptyState');
+  const summary=document.getElementById('summary');
+
+  if(!rows.length){
+    table.style.display='none';
+    empty.textContent='📭 沒有符合篩選條件的紀錄';
+    empty.style.display='block';
+    summary.innerHTML='';
+    buildChart([]);
+    return;
+  }
+
+  const uniqueDays=new Set(rows.map(r=>r.date+r.name)).size;
+  const weights=rows.map(r=>r.weight).filter(w=>w>0);
+  const maxWeight=weights.length?Math.max(...weights):0;
+  const latest=rows[rows.length-1];
+
+  summary.innerHTML=`
+    <div class="stat-card"><div class="val">${rows.length}</div><div class="lbl">符合筆數</div></div>
+    <div class="stat-card"><div class="val">${uniqueDays}</div><div class="lbl">訓練天數</div></div>
+    <div class="stat-card"><div class="val">${maxWeight>0?maxWeight+'kg':'—'}</div><div class="lbl">篩選範圍最大重量</div></div>
+    <div class="stat-card"><div class="val">${escapeHtml(latest.date)}</div><div class="lbl">最新紀錄日期</div></div>
+  `;
+
+  document.getElementById('tableBody').innerHTML=rows.map(r=>`
+    <tr>
+      <td>${escapeHtml(r.date)}</td>
+      <td>${escapeHtml(r.time)}</td>
+      <td>${escapeHtml(r.unit)}</td>
+      <td>${escapeHtml(r.name)}</td>
+      <td>Week ${escapeHtml(r.week)} · ${escapeHtml(r.dayLabel)}</td>
+      <td>${escapeHtml(r.exName)}</td>
+      <td class="weight-cell">${r.weight>0?r.weight+'kg':'—'}</td>
+      <td>${r.doneSets}/${r.totalSets}</td>
+    </tr>`).join('');
+
+  empty.style.display='none';
+  table.style.display='table';
+  buildChart(rows);
+}
+
+document.getElementById('filterName').addEventListener('change',()=>{populateExerciseFilter();render();});
+document.getElementById('filterExercise').addEventListener('change',render);
+
+applyContrast(localStorage.getItem('trainblock_hc')==='1');
+loadData();
+</script>
+</body>
+</html>
