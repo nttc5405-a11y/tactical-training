@@ -151,19 +151,36 @@
   .hiit-bar-fill{height:100%;border-radius:3px;transition:width .1s linear,background .3s;}
 
   /* ── Sticky Timer ── */
-  #stickyTimer{position:fixed;bottom:0;left:0;right:0;background:rgba(15,15,15,0.96);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--border);padding:9px 18px;display:flex;align-items:center;gap:12px;z-index:998;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);flex-wrap:wrap;}
+  #stickyTimer{position:fixed;bottom:0;left:0;right:0;background:color-mix(in srgb,var(--surface) 95%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--border);padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:8px;z-index:998;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);}
   #stickyTimer.visible{transform:translateY(0);}
   .sticky-label{font-size:0.62rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;white-space:nowrap;}
   #stickyDisplay{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:3px;color:var(--accent);line-height:1;min-width:65px;transition:color .3s;}
   #stickyDisplay.running{color:#fff;}
   #stickyDisplay.done-flash{color:var(--accent2);}
-  .sticky-track{flex:1;height:3px;background:var(--border);border-radius:2px;overflow:hidden;min-width:50px;}
+  .sticky-track{position:absolute;top:0;left:0;right:0;height:3px;background:var(--border);overflow:hidden;}
+  .sticky-presets{display:flex;gap:4px;margin-right:auto;}
+  .sticky-chip{padding:5px 9px;border-radius:999px;border:1px solid var(--border);background:none;color:var(--muted);font-size:0.72rem;cursor:pointer;white-space:nowrap;font-family:inherit;}
+  .sticky-chip.active{border-color:var(--accent);color:var(--accent);}
+  #stickyTimer.flash{animation:restFlash .5s ease 3;}
+  @keyframes restFlash{50%{background:var(--accent2);}}
+  .workout-tail{padding:0 20px 140px;}
+  #stickyTimer #stickyDisplay{font-size:1.75rem;letter-spacing:1px;min-width:0;flex-shrink:0;}
+  .hiit-inline{padding:14px 16px;margin-bottom:12px;}
+  .hiit-inline .hiit-header{margin-bottom:8px;}
+  .hiit-inline .hiit-phase{margin:0;}
+  .hiit-row{display:flex;align-items:center;gap:14px;}
+  .hiit-inline .hiit-time{font-size:2.6rem;margin:0;min-width:92px;}
+  .hiit-mid{flex:1;min-width:0;}
+  .hiit-inline .hiit-cycle-dots{justify-content:flex-start;margin-bottom:8px;}
+  .hiit-inline .hiit-bar{margin:0;}
+  .hiit-btns{display:flex;gap:6px;}
+  @media(max-width:420px){.sticky-label{display:none;}.hiit-row{flex-wrap:wrap;}.hiit-btns{width:100%;}.hiit-btns .t-btn{flex:1;}}
   .sticky-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .1s linear;}
   .sticky-btn{padding:6px 16px;border-radius:999px;border:1px solid var(--border);background:none;color:var(--text);font-size:0.78rem;cursor:pointer;transition:all .2s;white-space:nowrap;}
-  .sticky-btn.primary{background:var(--accent);border-color:var(--accent);color:#000;font-weight:700;}
+  .sticky-btn.primary{background:var(--accent);border-color:var(--accent);color:#000;font-weight:700;min-width:58px;}
 
   /* ── FAB ── */
-  .fab-row{position:fixed;bottom:68px;right:14px;z-index:999;display:flex;flex-direction:column;gap:7px;align-items:flex-end;}
+  .fab-row{position:fixed;bottom:76px;right:14px;z-index:999;display:flex;flex-direction:column;gap:7px;align-items:flex-end;}
   .fab-btn{background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:999px;padding:8px 14px;font-size:0.78rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:5px;box-shadow:0 4px 16px rgba(0,0,0,0.4);white-space:nowrap;}
   .fab-btn:hover{border-color:var(--accent);color:var(--accent);}
 
@@ -279,7 +296,6 @@
 <!-- Top Navigation -->
 <div class="top-tabs">
   <button class="top-tab active" onclick="switchPage('workout')">📋 課表</button>
-  <button class="top-tab" onclick="switchPage('timer')">⏱ 計時</button>
   <button class="top-tab" onclick="window.open('dashboard.html','_blank')">📈 儀表板</button>
   <button class="top-tab" onclick="window.open('https://drive.google.com/drive/folders/1x9-kvyzQF6rXZ97y4VlzGBywM3JkxQLY?usp=sharing','_blank')">📚 教材</button>
 </div>
@@ -298,54 +314,39 @@
   </div>
   <div class="day-nav" id="dayNav"></div>
   <div id="panels"></div>
-</div>
-
-<!-- ══════════ PAGE: TIMER ══════════ -->
-<div id="page-timer" class="page">
-  <div class="timers-wrap" id="timersWrap" style="padding-top:20px;">
-    <div class="timer-section">
-      <div class="timer-title">⏱ 組間計時器</div>
-      <div class="rest-timer">
-        <div class="timer-display" id="restDisplay">01:30</div>
-        <div class="timer-btns">
-          <button class="t-btn primary" id="restStartBtn" onclick="toggleRest()">開始</button>
-          <button class="t-btn" onclick="resetRest()">重置</button>
-        </div>
-        <div class="preset-btns">
-          <button class="preset-btn" onclick="setRest(60)">60秒</button>
-          <button class="preset-btn" onclick="setRest(75)">75秒</button>
-          <button class="preset-btn" onclick="setRest(90)">90秒</button>
-        </div>
-      </div>
-    </div>
-    <div class="timer-section">
+  <div class="workout-tail">
+    <div class="timer-section hiit-inline">
       <div class="hiit-header">
-        <div class="timer-title" style="margin:0">🔥 收尾間歇</div>
-        <div class="hiit-stats">
-          <div class="hiit-stat"><div class="val">30</div><div class="lbl">WORK秒</div></div>
-          <div class="hiit-stat"><div class="val">90</div><div class="lbl">REST秒</div></div>
-          <div class="hiit-stat"><div class="val">6</div><div class="lbl">循環</div></div>
+        <div class="timer-title" style="margin:0">🔥 收尾間歇 · 30s / 90s × 6</div>
+        <div class="hiit-phase" id="hiitPhase">準備開始</div>
+      </div>
+      <div class="hiit-row">
+        <div class="hiit-time" id="hiitTime">00:30</div>
+        <div class="hiit-mid">
+          <div class="hiit-cycle-dots" id="cycleDots"></div>
+          <div class="hiit-bar"><div class="hiit-bar-fill" id="hiitFill" style="width:100%;background:var(--accent)"></div></div>
+        </div>
+        <div class="hiit-btns">
+          <button class="t-btn primary" id="hiitStartBtn" onclick="toggleHiit()">開始間歇</button>
+          <button class="t-btn danger" onclick="resetHiit()">↺</button>
         </div>
       </div>
-      <div class="hiit-display">
-        <div class="hiit-phase" id="hiitPhase">準備開始</div>
-        <div class="hiit-time" id="hiitTime">00:30</div>
-        <div class="hiit-cycle-dots" id="cycleDots"></div>
-        <div class="hiit-bar"><div class="hiit-bar-fill" id="hiitFill" style="width:100%;background:var(--accent)"></div></div>
-      </div>
-      <div class="timer-btns">
-        <button class="t-btn primary" id="hiitStartBtn" onclick="toggleHiit()">開始間歇</button>
-        <button class="t-btn danger" onclick="resetHiit()">重置</button>
-      </div>
     </div>
+    <button class="finish-day-btn" onclick="openFinish()">✓ 完成今日訓練並記錄</button>
   </div>
 </div>
 
-<!-- Sticky Timer (shows on workout page when scrolled) -->
+<!-- 組間計時列（課表頁常駐） -->
 <div id="stickyTimer">
+  <div class="sticky-track"><div class="sticky-fill" id="stickyFill" style="width:100%"></div></div>
   <div class="sticky-label">組間</div>
   <div id="stickyDisplay">01:30</div>
-  <div class="sticky-track"><div class="sticky-fill" id="stickyFill" style="width:100%"></div></div>
+  <div class="sticky-presets">
+    <button class="sticky-chip" data-sec="60" onclick="setRest(60)">60</button>
+    <button class="sticky-chip" data-sec="75" onclick="setRest(75)">75</button>
+    <button class="sticky-chip" data-sec="90" onclick="setRest(90)">90</button>
+  </div>
+  <button class="sticky-chip auto" id="autoRestBtn" onclick="toggleAutoRest()" title="記錄一組後自動開始組間休息">⚡自動</button>
   <button class="sticky-btn primary" id="stickyStartBtn" onclick="toggleRest()">開始</button>
   <button class="sticky-btn" onclick="resetRest()">↺</button>
 </div>
@@ -655,8 +656,7 @@ function switchPage(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.top-tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
-  const idx={workout:0,timer:1}[name];
-  document.querySelectorAll('.top-tab')[idx].classList.add('active');
+  document.querySelectorAll('.top-tab')[0].classList.add('active');
   // sticky timer only on workout page
   checkSticky();
 }
@@ -711,7 +711,6 @@ function renderContent(){
       <div class="ex-grid">${mainCards}</div>
       <div class="section-label">副項 · 10×3</div>
       <div class="ex-grid">${auxCards}</div>
-      <button class="finish-day-btn" onclick="openFinish()">✓ 完成今日訓練並記錄</button>
     </div>`;
   attachSwipeListeners();
 }
@@ -766,6 +765,8 @@ function addSet(key,name,type){
   if(cur>=total)return;
   setsData[key][name]=cur+1;
   renderContent();
+  // 記錄一組 → 自動開始組間休息
+  if(autoRest){clearInterval(restInterval);restRunning=false;restLeft=restTotal;toggleRest();}
 }
 function adjustSets(key,name,type,delta){
   resumeAudio();
@@ -1048,7 +1049,7 @@ function getHistory(){
 // ══════════════════════════════
 // Rest Timer
 // ══════════════════════════════
-let restTotal=90,restLeft=90,restRunning=false,restInterval=null;
+let restTotal=+localStorage.getItem('trainblock_rest')||90,restLeft=restTotal,restRunning=false,restInterval=null;
 function fmt(s){return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;}
 function syncRestUI(){
   const pct=restTotal>0?(restLeft/restTotal)*100:0;
@@ -1056,10 +1057,14 @@ function syncRestUI(){
   const cls=restRunning?'running':(restLeft<=0?'done-flash':'');
   ['restDisplay','stickyDisplay'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent=txt;el.className=cls;}});
   const rsb=document.getElementById('restStartBtn');if(rsb)rsb.textContent=restRunning?'暫停':(restLeft<=0?'開始':'繼續');
-  const ssb=document.getElementById('stickyStartBtn');if(ssb)ssb.textContent=restRunning?'暫停':(restLeft<=0?'開始':'繼續');
-  const sf=document.getElementById('stickyFill');if(sf){sf.style.width=pct+'%';sf.style.background=restRunning?'#fff':'var(--accent)';}
+  const ssb=document.getElementById('stickyStartBtn');if(ssb)ssb.textContent=restRunning?'暫停':((restLeft<=0||restLeft===restTotal)?'開始':'繼續');
+  const sf=document.getElementById('stickyFill');if(sf){sf.style.width=pct+'%';sf.style.background=restRunning?'var(--text)':'var(--accent)';}
+  document.querySelectorAll('.sticky-chip[data-sec]').forEach(c=>c.classList.toggle('active',+c.dataset.sec===restTotal));
 }
-function setRest(s){resetRest();restTotal=restLeft=s;syncRestUI();}
+function setRest(s){resetRest();restTotal=restLeft=s;localStorage.setItem('trainblock_rest',String(s));syncRestUI();}
+let autoRest=localStorage.getItem('trainblock_autorest')!=='0';
+function syncAutoBtn(){document.getElementById('autoRestBtn').classList.toggle('active',autoRest);}
+function toggleAutoRest(){autoRest=!autoRest;localStorage.setItem('trainblock_autorest',autoRest?'1':'0');syncAutoBtn();}
 function toggleRest(){
   resumeAudio();
   if(restRunning){clearInterval(restInterval);restRunning=false;syncRestUI();}
@@ -1069,7 +1074,9 @@ function toggleRest(){
     restInterval=setInterval(()=>{
       restLeft--;
       if(restLeft===3)beepWarn();
-      if(restLeft<=0){clearInterval(restInterval);restRunning=false;beepDone();}
+      if(restLeft<=0){clearInterval(restInterval);restRunning=false;beepDone();
+        const st=document.getElementById('stickyTimer');st.classList.remove('flash');void st.offsetWidth;st.classList.add('flash');
+        if(navigator.vibrate)navigator.vibrate([200,100,200]);}
       syncRestUI();
     },1000);
   }
@@ -1081,11 +1088,7 @@ function resetRest(){clearInterval(restInterval);restRunning=false;restLeft=rest
 // ══════════════════════════════
 function checkSticky(){
   const onWorkout=document.getElementById('page-workout').classList.contains('active');
-  if(!onWorkout){document.getElementById('stickyTimer').classList.remove('visible');return;}
-  const panels=document.getElementById('panels');
-  if(!panels)return;
-  const rect=panels.getBoundingClientRect();
-  document.getElementById('stickyTimer').classList.toggle('visible',rect.bottom<window.innerHeight*0.5);
+  document.getElementById('stickyTimer').classList.toggle('visible',onWorkout);
 }
 window.addEventListener('scroll',checkSticky,{passive:true});
 window.addEventListener('resize',checkSticky,{passive:true});
@@ -1246,7 +1249,7 @@ function toggleLightMode(){
 // ══════════════════════════════
 // Init
 // ══════════════════════════════
-buildCycleDots();renderDayNav();renderContent();updateHiitUI();syncRestUI();updateProfileBtn();
+buildCycleDots();renderDayNav();renderContent();updateHiitUI();syncRestUI();updateProfileBtn();syncAutoBtn();
 applyLightMode(localStorage.getItem('trainblock_light')==='1');
 document.getElementById('weightInput').addEventListener('keydown',e=>{if(e.key==='Enter')saveWeight();});
 setTimeout(checkSticky,200);
